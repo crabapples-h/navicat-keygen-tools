@@ -61,22 +61,27 @@
 
        _`May change when Navicat product changes. Uncertain yet. But it's very possible right.`_  
 
-    3. __data[5]__ and __data[6]__ must be `0xCE` and `0x32` respectively.
+    3. __data[5]__ and __data[6]__ are related with your Navicat product language. It depends.
 
-       _`May change when Navicat product changes. Uncertain yet.`_  
+       ~~_`May change when Navicat product changes. Uncertain yet.`_~~  
+       _`Must change when Navicat product changes. Confirmed yet.`_
+
+       For __Navicat 12 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
+       For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
+       For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
 
     4. __data[7]__ represents whether it is __commercial license__ or __non-commercial license__.
 
-       In Navicat 12: `0x65` is __commercial license__, `0x66` is __non-commercial license__.  
-       In Navicat 11: `0x15` is __commercial license__, `0x16` is __non-commercial license__.  
+       For Navicat 12 x64: `0x65` is __commercial license__, `0x66` is __non-commercial license__.  
+       For Navicat 11 x64: `0x15` is __commercial license__, `0x16` is __non-commercial license__.  
 
        _`May change when Navicat product changes. Uncertain yet.`_  
        _`Must change when version change.`_  
 
     5. High 4 bits of __data[8]__ represents __version number__. Low 4 bits is unknown, but we can use it to delay activation deadline. Possible value is `0000` or `0001`.
 
-       In Navicat 12: High 4 bits must be `1100`, which is the binary of number `12`.
-       In Navicat 11: High 4 bits must be `1011`, which is the binary of number `11`.
+       For Navicat 12 x64: High 4 bits must be `1100`, which is the binary of number `12`.
+       For Navicat 11 x64: High 4 bits must be `1011`, which is the binary of number `11`.
 
        _`Must change when version change.`_  
 

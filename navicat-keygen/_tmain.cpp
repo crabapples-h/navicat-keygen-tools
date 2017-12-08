@@ -2,6 +2,10 @@
 #include <windows.h>
 #include <wincrypt.h>
 
+#ifndef UNICODE
+#include <stdio.h>
+#endif
+
 #include <openssl/err.h>
 #include <openssl/bio.h>
 #include <openssl/rsa.h>
@@ -21,8 +25,12 @@ void GenerateSnKey(char(&SnKey)[16]) {
     temp_snKey[2] = rand();
     temp_snKey[3] = rand();
     temp_snKey[4] = rand();
-    temp_snKey[5] = 0xCE;   //  must be 0xCE
-    temp_snKey[6] = 0x32;   //  must be 0x32
+    temp_snKey[5] = 0xCE;   //  Must be 0xCE for Simplified Chinese version.
+                            //  Must be 0xAA for Traditional Chinese version.
+
+    temp_snKey[6] = 0x32;   //  Must be 0x32 for Simplified Chinese version.
+                            //  Must be 0x99 for Traditional Chinese version.
+
 #if defined(NAVICAT_12)
     temp_snKey[7] = 0x65;   //  0x65 - commercial, 0x66 - non-commercial
     temp_snKey[8] = 0xC0;   //  High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
@@ -105,7 +113,6 @@ BOOL GenerateLicense(RSA* RSAPrivateKey,
     CloseHandle(hLicenseFile);
     return TRUE;
 #endif
-
 }
 
 int _tmain(int argc, TCHAR* argv[]) {
@@ -177,7 +184,7 @@ int _tmain(int argc, TCHAR* argv[]) {
     char* Name = tName;
     char* Organization = tOrganization;
 #endif
-    
+
     char SnKey[16] = { };
     GenerateSnKey(SnKey);
 
@@ -216,6 +223,14 @@ int _tmain(int argc, TCHAR* argv[]) {
         RSA_free(PrivateKey);
         return -3;
     }
+
+#ifdef _DEBUG
+#ifdef UNICODE
+    _tprintf_s(TEXT("%S\r\n"), request_code);
+#else
+    _tprintf_s(TEXT("%s\r\n"), request_code);
+#endif
+#endif
 
     //--------------------------------------------------------------------
 
