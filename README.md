@@ -8,7 +8,7 @@
 
     It is a __RSA-2048__ public key that Navicat used to encrypt or decrypt offline activation information.
 
-    It is stored in __navicat.exe__ as a kind of resource called __RCData__. You can see it by a kind of software [___Resource Hacker___](http://www.angusj.com/resourcehacker/). The concrete content is:
+    It is stored in __navicat.exe__ as a kind of resource called __RCData__. The resource name is `"ActivationPubKey"`. You can see it by a kind of software [___Resource Hacker___](http://www.angusj.com/resourcehacker/). The concrete content is:
 
     > -----BEGIN PUBLIC KEY-----  
     > MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw1dqF3SkCaAAmMzs889I  
@@ -72,16 +72,16 @@
 
     4. __data[7]__ represents whether it is __commercial license__ or __non-commercial license__.
 
-       For Navicat 12 x64: `0x65` is __commercial license__, `0x66` is __non-commercial license__.  
-       For Navicat 11 x64: `0x15` is __commercial license__, `0x16` is __non-commercial license__.  
+       For __Navicat 12 x64__: `0x65` is __commercial license__, `0x66` is __non-commercial license__.  
+       For __Navicat 11 x64__: `0x15` is __commercial license__, `0x16` is __non-commercial license__.  
 
        _`May change when Navicat product changes. Uncertain yet.`_  
        _`Must change when version change.`_  
 
     5. High 4 bits of __data[8]__ represents __version number__. Low 4 bits is unknown, but we can use it to delay activation deadline. Possible value is `0000` or `0001`.
 
-       For Navicat 12 x64: High 4 bits must be `1100`, which is the binary of number `12`.
-       For Navicat 11 x64: High 4 bits must be `1011`, which is the binary of number `11`.
+       For __Navicat 12 x64__: High 4 bits must be `1100`, which is the binary of number `12`.  
+       For __Navicat 11 x64__: High 4 bits must be `1011`, which is the binary of number `11`.  
 
        _`Must change when version change.`_  
 
