@@ -70,6 +70,8 @@
        For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
        For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
 
+       According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that this two bytes are product signature.
+
     4. __data[7]__ represents whether it is __commercial license__ or __non-commercial license__.
 
        For __Navicat 12 x64__: `0x65` is __commercial license__, `0x66` is __non-commercial license__.  
@@ -78,16 +80,28 @@
        _`May change when Navicat product changes. Uncertain yet.`_  
        _`Must change when version change.`_  
 
+       According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that commercial license is __Enterprise License__ and non-commercial license is __Educational License__.
+
     5. High 4 bits of __data[8]__ represents __version number__. Low 4 bits is unknown, but we can use it to delay activation deadline. Possible value is `0000` or `0001`.
 
        For __Navicat 12 x64__: High 4 bits must be `1100`, which is the binary of number `12`.  
        For __Navicat 11 x64__: High 4 bits must be `1011`, which is the binary of number `11`.  
 
-       _`Must change when version change.`_  
+       _`Must change when version change. Confirmed by Navicat 12 for Mac x64 with IDA Pro 7.0`_  
 
     6. __data[9]__ is unknown, but you can set it `0xFD` or `0xFC` or `0xFB` if you want to use __not-for-resale license__.
 
        _`May change when Navicat product changes. Uncertain yet.`_  
+
+       According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that:
+
+       * `0xFB` is __Not-For-Resale-30-days__ license.  
+       * `0xFC` is __Not-For-Resale-90-days__ license.  
+       * `0xFD` is __Not-For-Resale-365-days__ license.  
+       * `0xFE` is __Not-For-Resale__ license.  
+       * `0xFF` is __Site__ license.  
+
+    -----------------
 
     After that. Navicat use __DES__ with __ECB mode__ to encrypt the last 8 bytes which are from __data[2]__ to __data[9]__.
 
@@ -97,7 +111,7 @@
     unsigned char DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
     ```
 
-    Then encode the 10-bytes-long data:
+    Then encode the 10-bytes-long data: __(Use Base32 encode if you just want a conclusion.)__
 
     1. Regard __data[10]__ as a 80-bits-long data.
 
