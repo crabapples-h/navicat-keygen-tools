@@ -8,7 +8,7 @@
 
     It is a __RSA-2048__ public key that Navicat used to encrypt or decrypt offline activation information.
 
-    It is stored in __navicat.exe__ as a kind of resource called __RCData__. The resource name is `"ActivationPubKey"`. You can see it by a kind of software [___Resource Hacker___](http://www.angusj.com/resourcehacker/). The concrete content is:
+    It is stored in __Navicat Premium.app/Contents/Resources/rpk__. You can see it by any kind of text editor. The concrete content is:
 
     > -----BEGIN PUBLIC KEY-----  
     > MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw1dqF3SkCaAAmMzs889I  
@@ -28,10 +28,14 @@
 
   * __Offline Activation Request Information__
 
-    It is just a JSON-style ASCII string which contains 3 items. Respectively they are `"K"`, `"DI"` and `"P"`, which represent __snKey__, __checksum__ (related with your machine and OS), __Platform__ (Appropriately speaking, it should be OS Type).
+    It is just a JSON-style ASCII string which contains 3 items. Respectively they are `"K"`, `"DI"` and `"P"`, which represent __snKey__, __DeviceIdentifier__ (related with your machine), __Platform__ (Appropriately speaking, it should be OS Type).
 
     Like:  
-    > {"K": "xxxxxxxxxxxxxxxx", "DI": "yyyyyyyyyyyyy", "P": "WIN8"}
+    > {  
+    >     "K": "xxxxxxxxxxxxxxxx",  
+    >     "P": "Mac 10.13",  
+    >     "DI": "xxxxxxxxxxxxxxxxxxxx"  
+    > }  
 
   * __Activation Code__
 
@@ -43,9 +47,17 @@
 
     `"K"` and `"DI"` has the same meaning mentioned in __Offline Activation Request Information__ and must be same with the corresponding items in __Offline Activation Request Information__.
 
-    `"N"`, `"O"`, `"T"` represent __Name__, __Organization__, __Time__ respectively. __Name__ and __Organization__ are string and the type of __Time__ is unknown.
+    `"N"`, `"O"`, `"T"` represent __Name__, __Organization__, __Time__ respectively. __Name__ and __Organization__ are string and the type of __Time__ can be string or integer (Thanks for discoveries from @Wizr, issue #10).
 
-    `"T"` can be omitted.
+    Differ from Navicat Windows version, `"T"` is mandatory and must be -1 ~ +4 days difference from current time. Here is an example of __Offline Activation Response Information__:
+
+    > {  
+    >     "DI" : "xxxxxxxxxxxxxxxxxxxx",  
+    >     "T" : "1515770827.925012",  
+    >     "K" : "xxxxxxxxxxxxxxxx",  
+    >     "N" : "DoubleLabyrinth",  
+    >     "O" : "Shadow"  
+    > }  
 
   * __snKey__
 
@@ -66,6 +78,7 @@
        ~~_`May change when Navicat product changes. Uncertain yet.`_~~  
        _`Must change when Navicat product changes. Confirmed yet.`_
 
+       For __Navicat 12 x64 English version__: They must be `0xAC` and `0x88` respectively.  
        For __Navicat 12 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
        For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
        For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
@@ -89,7 +102,7 @@
 
        _`Must change when version change. Confirmed by Navicat 12 for Mac x64 with IDA Pro 7.0`_  
 
-    6. __data[9]__ is unknown, but you can set it `0xFD` or `0xFC` or `0xFB` if you want to use __not-for-resale license__.
+    6. __data[9]__ is unknown, but you can set it `0xFD` or `0xFC` or `0xFB` if you want to use __not-for-resale license__. This must not be `0x00`. But other value is OK.
 
        _`May change when Navicat product changes. Uncertain yet.`_  
 
@@ -111,7 +124,7 @@
     unsigned char DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
     ```
 
-    Then encode the 10-bytes-long data: __(Use Base32 encode if you just want a conclusion.)__
+    Then encode the 10-bytes-long data:
 
     1. Regard __data[10]__ as a 80-bits-long data.
 
@@ -124,7 +137,8 @@
     3. So the value every block is less than 32. Map them by a encode-table:
 
        ```cpp
-       char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+       // Thanks for discoveries from @Wizr, issue #10
+       char EncodeTable[] = "ABCDEFGH8JKLMN9PQRSTUVWXYZ234567";
        ```
 
        Then you will get a 16-char-long string.
@@ -154,3 +168,48 @@
      4. Encode 256-byte-long data by Base64. The result is __Activation Code__.
 
   5. Input __Activation Code__, then offline activation is done.
+
+## 4. How to build
+
+   ```bash
+   $ cd navicat-keygen
+   $ make release VER=NAVICAT_12_ENG
+   ```
+
+   `VER` must be specified, and supported `VER` are:
+   |Version                        |`VER` Macro   |
+   |-------------------------------|--------------|
+   |For English version            |NAVICAT_12_ENG|
+   |For Simplified Chinese version |NAVICAT_12_CHS|
+   |For Traditional Chinese version|NAVICAT_12_CHT|
+
+## 5. How to Use
+  1. Build keygen.
+
+  2. Generate RSA-2048 private key and public key.
+
+     ```bash
+     $ openssl genrsa -out 2048key.pem 2048
+     $ openssl rsa -in 2048key.pem -pubout -out rpk
+     ```
+
+     You will get two file: `2048key.pem` and `rpk`.
+
+  3. Replace `Navicat Premium.app/Contents/Resources/rpk` file by `rpk` file you just generated.
+
+  4. In Terminal:
+
+     ```bash
+     $ ./navicat-keygen 2048key.pem
+     ```
+
+     You will get a __snKey__ and be asked to input your name and organization.  
+     Just input and then you will be asked to input the request code. Now DO NOT CLOSE KEYGEN.
+
+  5. Open Navicat Premium, find and click `Registration`. Then input `Registration Key` by __snKey__ that keygen gave. Then click `Activate`.
+
+  6. Generally online activation will failed and Navicat will ask you do `Manual Activation`, just choose it.
+
+  7. Copy your request code and paste it in keygen. Leave empty line to tell keygen that your input ends.
+
+  8. Then you will get activation code which looks like a Base64 string. Just copy it and paste it in Navicat `Manual Activation` window, then click `Activate`. If nothing is wrong, activation should be done successfully.
