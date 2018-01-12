@@ -11,30 +11,41 @@
 #include <openssl/des.h>
 #include <openssl/evp.h>
 
-#define NAVICAT_12
-
 void GenerateSnKey(char(&SnKey)[16]) {
-    static char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    static char EncodeTable[] = "ABCDEFGH8JKLMN9PQRSTUVWXYZ234567"; // Thanks for discoveries from @Wizr.
+                                                                    // This is not a standard Base32 alphabet table.
+                                                                    // The differences are:
+                                                                    // |  Standard  |  Non-standard  |
+                                                                    // |------------|----------------|
+                                                                    // |    'I'     |      '8'       |
+                                                                    // |    'O'     |      '9'       |
+    
     static DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
 
     unsigned char temp_snKey[10] = { 0x68, 0x2a };   //  must start with 0x68, 0x2a
     temp_snKey[2] = rand();
     temp_snKey[3] = rand();
     temp_snKey[4] = rand();
-    temp_snKey[5] = 0xCE;   //  Must be 0xCE for Simplified Chinese version.
-                            //  Must be 0xAA for Traditional Chinese version.
-
-    temp_snKey[6] = 0x32;   //  Must be 0x32 for Simplified Chinese version.
-                            //  Must be 0x99 for Traditional Chinese version.
-
-#if defined(NAVICAT_12)
-    temp_snKey[7] = 0x65;   //  0x65 - commercial, 0x66 - non-commercial
-    temp_snKey[8] = 0xC0;   //  High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
-#elif defined(NAVICAT_11)
-    temp_snKey[7] = 0x15;   //  0x15 - commercial, 0x16 - non-commercial
-    temp_snKey[8] = 0xB0;   //  High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
+#if defined(NAVICAT_12_ENG)
+    temp_snKey[5] = 0xAC;       // Must be 0xAC for English version.
+    temp_snKey[6] = 0x88;       // Must be 0x88 for English version.
+#elif defined(NAVICAT_12_CHS)
+    temp_snKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
+    temp_snKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
+#elif defined(NAVICAT_12_CHT)
+    temp_snKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
+    temp_snKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+#else
+#error "Navicat version is not specified."
 #endif
-    temp_snKey[9] = 0xFE;   //  0xfd, 0xfc, 0xfb if you want to use not-for-resale license.
+    temp_snKey[7] = 0x65;       // 0x65 - commercial, 0x66 - non-commercial
+    temp_snKey[8] = 0xC0;       // High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
+    temp_snKey[9] = 0x32;       // 0xFB is Not-For-Resale-30-days license.
+                                // 0xFC is Not-For-Resale-90-days license.
+                                // 0xFD is Not-For-Resale-365-days license.
+                                // 0xFE is Not-For-Resale license.
+                                // 0xFF is Site license.
+                                // Must not be 0x00. 0x01-0xFA is ok.
 
     DES_key_schedule schedule;
     DES_set_odd_parity(&DESKey);
@@ -69,14 +80,16 @@ void GenerateSnKey(char(&SnKey)[16]) {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage:\n");
+        printf("    ./navicat-keygen <RSA-2048 PrivateKey(PEM file)>\n");
+        return 0;
+    }
+    
     srand(time(0));
 
-    char SnKey[17] = { "NAVFZCE3FDCB46BX" };
-    //GenerateSnKey(snKey);
-    printf("\r\n");
-    printf("SnKey:\r\n");
-    printf("%.4s-%.4s-%.4s-%.4s\r\n", SnKey, SnKey + 4, SnKey + 8, SnKey + 12);
-    printf("\r\n");
+    char SnKey[16] = { };
+    GenerateSnKey(SnKey);
 
     double current_time
         = std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -116,43 +129,61 @@ int main(int argc, char* argv[]) {
     unsigned char enc_data[1024] = { };
     char data[1024] = { };
 
-    std::string DI;
+    std::string DeviceIdentifier("");
     EVP_DecodeBlock(enc_data, reinterpret_cast<const unsigned char*>(buffer.c_str()), buffer.length());
-    RSA_private_decrypt(256, enc_data, reinterpret_cast<unsigned char*>(data), PrivateKey, RSA_PKCS1_PADDING);
-    for (size_t i = 0, length = strlen(data); i < length; ++i) {
-        if(data[i] == 'D' && data[i + 1] == 'I' && data[i + 2] == '"') {
+    if (RSA_private_decrypt(256, enc_data, reinterpret_cast<unsigned char*>(data), PrivateKey, RSA_PKCS1_PADDING) == -1) {
+        printf("Failed to decrypt data.\n");
+        return -3;
+    }
+#ifdef _DEBUG
+    printf("-----------Begin Request Code Data---------------\n");
+    printf("%s\n", data);
+    printf("-----------End Request Code Data---------------\n");
+#endif
+    // Get DeviceIdentifier from data.
+    for (int i = 0, length = strlen(data) - 4; i < length; ++i) {
+        if(data[i] == '"' &&
+           data[i + 1] == 'D' &&
+           data[i + 2] == 'I' &&
+           data[i + 3] == '"') {
+            
             char temp[256] = { };
-            size_t x = i + 3, j = 0;
-            while (data[x] != '"')
+            int x = i + 4, j = 0;
+            while (data[x] != '"' && x < length)
                 x++;
             x++;
-            while (data[x] != '"') {
+            while (data[x] != '"' && j < 256) {
                 temp[j++] = data[x];
                 x++;
             }
-            DI += temp;
+            DeviceIdentifier += temp;
             break;
         }
     }
 
     memset(data, 0, sizeof(data));
     memset(enc_data, 0, sizeof(enc_data));
+    
     snprintf(data, sizeof(data), "{\n  \"DI\" : \"%s\", \n  \"T\" : \"%lf\", \n  \"K\" : \"%.16s\", \n  \"N\" : \"%s\", \n  \"O\" : \"%s\"\n}",
-    DI.c_str(),//"NGVlZjdjOTViMzYyMWI0",
-    current_time,
-    "NAVFZCE3FDCB46BX",
-    Name.c_str(),//"Shadow",
-    Organization.c_str());
-
+        DeviceIdentifier.c_str(),
+        current_time,
+        SnKey,
+        Name.c_str(),
+        Organization.c_str()
+    );
+    
+#ifdef _DEBUG
+    printf("-----------Begin Activation Code Data---------------\n");
     printf("%s\n", data);
+    printf("-----------End Activation Code Data---------------\n");
+#endif
+    
     RSA_private_encrypt(strlen(data), reinterpret_cast<unsigned char*>(data), enc_data, PrivateKey, RSA_PKCS1_PADDING);
 
     char result[1024] = { };
     EVP_EncodeBlock(reinterpret_cast<unsigned char*>(result), enc_data, 256);
-    printf("%s\n", result);
+    printf("Activation Code:\n%s\n", result);
 
-    EVP_DecodeBlock(enc_data, (unsigned char*)result, strlen(result));
-    RSA_private_decrypt(256, enc_data, (unsigned char*)result, PrivateKey, RSA_PKCS1_PADDING);
     RSA_free(PrivateKey);
     return 0;
 }
