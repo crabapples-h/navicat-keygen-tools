@@ -32,9 +32,9 @@
 
     Like:  
     > {  
-    >     "K": "xxxxxxxxxxxxxxxx",  
-    >     "P": "Mac 10.13",  
-    >     "DI": "xxxxxxxxxxxxxxxxxxxx"  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"K": "xxxxxxxxxxxxxxxx",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"P": "Mac 10.13",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"DI": "xxxxxxxxxxxxxxxxxxxx"  
     > }  
 
   * __Activation Code__
@@ -52,11 +52,11 @@
     Differ from Navicat Windows version, `"T"` is mandatory and must be -1 ~ +4 days difference from current time. Here is an example of __Offline Activation Response Information__:
 
     > {  
-    >     "DI" : "xxxxxxxxxxxxxxxxxxxx",  
-    >     "T" : "1515770827.925012",  
-    >     "K" : "xxxxxxxxxxxxxxxx",  
-    >     "N" : "DoubleLabyrinth",  
-    >     "O" : "Shadow"  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"DI" : "xxxxxxxxxxxxxxxxxxxx",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"T" : "1515770827.925012",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"K" : "xxxxxxxxxxxxxxxx",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"N" : "DoubleLabyrinth",  
+    > &nbsp;&nbsp;&nbsp;&nbsp;"O" : "Shadow"  
     > }  
 
   * __snKey__
@@ -176,7 +176,8 @@
    $ make release VER=NAVICAT_12_ENG
    ```
 
-   `VER` must be specified, and supported `VER` are:
+   `VER` must be specified, and supported `VER` are:  
+
    |Version                        |`VER` Macro   |
    |-------------------------------|--------------|
    |For English version            |NAVICAT_12_ENG|
