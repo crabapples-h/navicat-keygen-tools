@@ -28,7 +28,7 @@
 
   * __Offline Activation Request Information__
 
-    It is just a JSON-style ASCII string which contains 3 items. Respectively they are `"K"`, `"DI"` and `"P"`, which represent __snKey__, __checksum__ (related with your machine and OS), __Platform__ (Appropriately speaking, it should be OS Type).
+    It is just a JSON-style ASCII string which contains 3 items. Respectively they are `"K"`, `"DI"` and `"P"`, which represent __snKey__, __DeviceIdentifier__ (related with your machine), __Platform__ (Appropriately speaking, it should be OS Type).
 
     Like:  
     > {"K": "xxxxxxxxxxxxxxxx", "DI": "yyyyyyyyyyyyy", "P": "WIN8"}
@@ -43,7 +43,7 @@
 
     `"K"` and `"DI"` has the same meaning mentioned in __Offline Activation Request Information__ and must be same with the corresponding items in __Offline Activation Request Information__.
 
-    `"N"`, `"O"`, `"T"` represent __Name__, __Organization__, __Time__ respectively. __Name__ and __Organization__ are string and the type of __Time__ is unknown.
+    `"N"`, `"O"`, `"T"` represent __Name__, __Organization__, __Time__ respectively. __Name__ and __Organization__ are string and the type of __Time__ can be string or integer (Thanks for discoveries from @Wizr, issue #10).
 
     `"T"` can be omitted.
 
@@ -66,6 +66,7 @@
        ~~_`May change when Navicat product changes. Uncertain yet.`_~~  
        _`Must change when Navicat product changes. Confirmed yet.`_
 
+       For __Navicat 12 x64 English version__: They must be `0xAC` and `0x88` respectively.  
        For __Navicat 12 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
        For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
        For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
@@ -154,3 +155,37 @@
      4. Encode 256-byte-long data by Base64. The result is __Activation Code__.
 
   5. Input __Activation Code__, then offline activation is done.
+
+## 4. How to use
+  1. Build patcher and keygen.
+
+  2. Replace __Navicat Activation Public Key__ in `navicat.exe`.  
+     Example:  
+
+     ```bash
+     E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe"
+     D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe has been backed up.
+     Public key has been replaced.
+     Success!
+
+     ```
+
+     You will get `RegPrivateKey.pem` file at current directory.
+
+  3. Then in console:
+
+     ```bash
+     E:\GitHub\navicat-keygen\x64\Release>navicat-keygen.exe RegPrivateKey.pem
+
+     ```
+
+     You will get a __snKey__ and be asked to input your name and organization.  
+     Just input and then you will be asked to input the request code. Now __DO NOT CLOSE KEYGEN__.
+
+  4. Disconnect network and open Navicat Premium, find and click `Registration`. Then input `Registration Key` by snKey that keygen gave. Then click `Activate`.
+
+  5. Generally online activation will failed and Navicat will ask you do `Manual Activation`, just choose it.
+
+  6. Copy your request code and paste it in keygen. Input empty line to tell keygen that your input ends.
+
+  7. Then you will get activation code which looks like a Base64 string. Just copy it and paste it in Navicat `Manual Activation` window, then click Activate. If nothing is wrong, activation should be done successfully.
