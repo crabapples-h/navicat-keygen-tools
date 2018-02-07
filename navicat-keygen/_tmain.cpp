@@ -35,6 +35,9 @@ void GenerateSnKey(char(&SnKey)[16]) {
 #elif defined(NAVICAT_CHT)
     temp_SnKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
     temp_SnKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+#elif defined(NAVICAT_FRE)
+    temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
+    temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
 #else
 #error "Navicat product type is not specified."
 #endif
