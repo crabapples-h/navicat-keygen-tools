@@ -66,10 +66,19 @@
        ~~_`May change when Navicat product changes. Uncertain yet.`_~~  
        _`Must change when Navicat product changes. Confirmed yet.`_
 
-       For __Navicat 12 x64 English version__: They must be `0xAC` and `0x88` respectively.  
-       For __Navicat 12 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
-       For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
-       For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
+       |  Language  |  data[5]  |  data[6]  |  Discoverer     |
+       |------------|-----------|-----------|-----------------|
+       |  English   |  0xAC     |  0x88     |                 |
+       |  简体中文   |  0xCE     |  0x32     |                 |
+       |  繁體中文   |  0xAA     |  0x99     |                 |
+       |  日本語     |  0xAD     |  0x82     |  @dragonflylee  |
+       |  Polski    |  0xBB     |  0x55     |  @dragonflylee  |
+       |  Español   |  0xAE     |  0x10     |  @dragonflylee  |
+       |  Français  |  0xFA     |  0x20     |  @Deltafox79    |
+       |  Deutsch   |  0xB1     |  0x60     |  @dragonflylee  |
+       |  한국어     |  0xB5     |  0x60     |  @dragonflylee  |
+       |  Русский   |  0xEE     |  0x16     |  @dragonflylee  |
+       |  Português |  0xCD     |  0x49     |  @dragonflylee  |
 
        According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that this two bytes are product signature.
 

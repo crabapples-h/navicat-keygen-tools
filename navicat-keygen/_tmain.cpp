@@ -35,9 +35,30 @@ void GenerateSnKey(char(&SnKey)[16]) {
 #elif defined(NAVICAT_CHT)
     temp_SnKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
     temp_SnKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+#elif defined(NAVICAT_JAP)
+    temp_SnKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
+#elif defined(NAVICAT_POL)
+    temp_SnKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
+#elif defined(NAVICAT_SPA)
+    temp_SnKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
 #elif defined(NAVICAT_FRE)
     temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
     temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
+#elif defined(NAVICAT_GER)
+    temp_SnKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
+#elif defined(NAVICAT_KOR)
+    temp_SnKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
+#elif defined(NAVICAT_RUS)
+    temp_SnKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
+#elif defined(NAVICAT_POR)
+    temp_SnKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
+    temp_SnKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
 #else
 #error "Navicat product type is not specified."
 #endif
