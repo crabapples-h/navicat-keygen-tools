@@ -19,7 +19,7 @@ void GenerateSnKey(char(&SnKey)[16]) {
                                                                     // |------------|----------------|
                                                                     // |    'I'     |      '8'       |
                                                                     // |    'O'     |      '9'       |
-    
+
     static DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
 
     unsigned char temp_snKey[10] = { 0x68, 0x2a };   //  must start with 0x68, 0x2a
@@ -35,6 +35,9 @@ void GenerateSnKey(char(&SnKey)[16]) {
 #elif defined(NAVICAT_12_CHT)
     temp_snKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
     temp_snKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+#elif defined(NAVICAT_12_FRE)
+    temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
+    temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
 #else
 #error "Navicat version is not specified."
 #endif
@@ -85,7 +88,7 @@ int main(int argc, char* argv[]) {
         printf("    ./navicat-keygen <RSA-2048 PrivateKey(PEM file)>\n");
         return 0;
     }
-    
+
     srand(time(0));
 
     char SnKey[16] = { };
@@ -146,7 +149,7 @@ int main(int argc, char* argv[]) {
            data[i + 1] == 'D' &&
            data[i + 2] == 'I' &&
            data[i + 3] == '"') {
-            
+
             char temp[256] = { };
             int x = i + 4, j = 0;
             while (data[x] != '"' && x < length)
@@ -163,7 +166,7 @@ int main(int argc, char* argv[]) {
 
     memset(data, 0, sizeof(data));
     memset(enc_data, 0, sizeof(enc_data));
-    
+
     snprintf(data, sizeof(data), "{\n  \"DI\" : \"%s\", \n  \"T\" : \"%lf\", \n  \"K\" : \"%.16s\", \n  \"N\" : \"%s\", \n  \"O\" : \"%s\"\n}",
         DeviceIdentifier.c_str(),
         current_time,
@@ -171,13 +174,13 @@ int main(int argc, char* argv[]) {
         Name.c_str(),
         Organization.c_str()
     );
-    
+
 #ifdef _DEBUG
     printf("-----------Begin Activation Code Data---------------\n");
     printf("%s\n", data);
     printf("-----------End Activation Code Data---------------\n");
 #endif
-    
+
     RSA_private_encrypt(strlen(data), reinterpret_cast<unsigned char*>(data), enc_data, PrivateKey, RSA_PKCS1_PADDING);
 
     char result[1024] = { };

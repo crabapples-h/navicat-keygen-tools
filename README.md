@@ -81,6 +81,8 @@
        For __Navicat 12 x64 English version__: They must be `0xAC` and `0x88` respectively.  
        For __Navicat 12 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
        For __Navicat 12 x64 Traditional Chinese version__: They must be `0xAA` and `0x99` respectively.  
+       For __Navicat 12 x64 French version__: They must be `0xFA` and `0x20` respectively. Discoverer: @Deltafox79
+
        For __Navicat 11 x64 Simplified Chinese version__: They must be `0xCE` and `0x32` respectively.  
 
        According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that this two bytes are product signature.
@@ -183,6 +185,7 @@
    |For English version            |NAVICAT_12_ENG|
    |For Simplified Chinese version |NAVICAT_12_CHS|
    |For Traditional Chinese version|NAVICAT_12_CHT|
+   |For French version             |NAVICAT_12_FRE|
 
 ## 5. How to Use
   1. Build keygen.
