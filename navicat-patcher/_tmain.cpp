@@ -37,7 +37,7 @@ BOOL BackupNavicat(PTSTR NavicatFileName) {
 BOOL ReplaceNavicatPublicKey(HANDLE resUpdater, void* pemPublicKey, size_t length) {
     return UpdateResource(resUpdater,
                           RT_RCDATA,
-                          TEXT("ActivationPubKey"),
+                          TEXT("ACTIVATIONPUBKEY"),
                           MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                           pemPublicKey, length);
 }
