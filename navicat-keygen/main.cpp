@@ -11,7 +11,21 @@
 #include <openssl/des.h>
 #include <openssl/evp.h>
 
-void GenerateSnKey(char(&SnKey)[16]) {
+enum NavicatLanguage {
+    English,
+    SimplifiedChinese,
+    TraditionalChinese,
+    Japanese,
+    Polish,
+    Spanish,
+    French,
+    German,
+    Korean,
+    Russian,
+    Portuguese
+};
+
+void GenerateSnKey(char (&SnKey)[16], NavicatLanguage _language) {
     static char EncodeTable[] = "ABCDEFGH8JKLMN9PQRSTUVWXYZ234567"; // Thanks for discoveries from @Wizr.
                                                                     // This is not a standard Base32 alphabet table.
                                                                     // The differences are:
@@ -26,42 +40,56 @@ void GenerateSnKey(char(&SnKey)[16]) {
     temp_snKey[2] = rand();
     temp_snKey[3] = rand();
     temp_snKey[4] = rand();
-#if defined(NAVICAT_ENG)
-    temp_snKey[5] = 0xAC;       // Must be 0xAC for English version.
-    temp_snKey[6] = 0x88;       // Must be 0x88 for English version.
-#elif defined(NAVICAT_CHS)
-    temp_snKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
-    temp_snKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
-#elif defined(NAVICAT_CHT)
-    temp_snKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
-    temp_snKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
-#elif defined(NAVICAT_JAP)
-    temp_SnKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_POL)
-    temp_SnKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_SPA)
-    temp_SnKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_FRE)
-    temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
-    temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
-#elif defined(NAVICAT_GER)
-    temp_SnKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_KOR)
-    temp_SnKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_RUS)
-    temp_SnKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_POR)
-    temp_SnKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
-#else
-#error "Navicat version is not specified."
-#endif
+    
+    switch (_language) {
+        case English:
+            temp_snKey[5] = 0xAC;       // Must be 0xAC for English version.
+            temp_snKey[6] = 0x88;       // Must be 0x88 for English version.
+            break;
+        case SimplifiedChinese:
+            temp_snKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
+            temp_snKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
+            break;
+        case TraditionalChinese:
+            temp_snKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
+            temp_snKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+            break;
+        case Japanese:
+            temp_snKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
+            break;
+        case Polish:
+            temp_snKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
+            break;
+        case Spanish:
+            temp_snKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
+            break;
+        case French:
+            temp_snKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
+            temp_snKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
+            break;
+        case German:
+            temp_snKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
+            break;
+        case Korean:
+            temp_snKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
+            break;
+        case Russian:
+            temp_snKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
+            break;
+        case Portuguese:
+            temp_snKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
+            temp_snKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
+            break;
+        default:
+            break;
+    }
+    
     temp_snKey[7] = 0x65;       // 0x65 - commercial, 0x66 - non-commercial
     temp_snKey[8] = 0xC0;       // High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
     temp_snKey[9] = 0x32;       // 0xFB is Not-For-Resale-30-days license.
@@ -97,23 +125,61 @@ void GenerateSnKey(char(&SnKey)[16]) {
     SnKey[14] = EncodeTable[temp_snKey[8] << 3 & 0x1F | temp_snKey[9] >> 5];
     SnKey[15] = EncodeTable[temp_snKey[9] & 0x1F];
 
-    printf("\r\n");
-    printf("SnKey:\r\n");
-    printf("%.4s-%.4s-%.4s-%.4s\r\n", SnKey, SnKey + 4, SnKey + 8, SnKey + 12);
-    printf("\r\n");
+    char formated_SnKeyString[20] = { };
+    snprintf(formated_SnKeyString, sizeof(formated_SnKeyString), "%.4s-%.4s-%.4s-%.4s", SnKey, SnKey + 4, SnKey + 8, SnKey + 12);
+    
+    std::cout << std::endl;
+    std::cout
+        << "SnKey:" << std::endl
+        << formated_SnKeyString << std::endl
+        << std::endl;
 }
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
-        printf("Usage:\n");
-        printf("    ./navicat-keygen <RSA-2048 PrivateKey(PEM file)>\n");
+        std::cout
+            << "Usage:" << std::endl
+            << "    ./navicat-keygen <RSA-2048 PrivateKey(PEM file)>" << std::endl
+            << std::endl;
         return 0;
     }
 
     srand(time(0));
-
+    
+    std::cout
+        << "Which is your Navicat language?" << std::endl
+        << "0. English" << std::endl
+        << "1. Simplified Chinese" << std::endl
+        << "2. Traditional Chinese" << std::endl
+        << "3. Japanese" << std::endl
+        << "4. Polish" << std::endl
+        << "5. Spanish" << std::endl
+        << "6. French" << std::endl
+        << "7. German" << std::endl
+        << "8. Korean" << std::endl
+        << "9. Russian" << std::endl
+        << "10. Portuguese" << std::endl
+        << std::endl;
+    
+    int LanguageIndex = -1;
+    while(true) {
+        std::cout << "(input index)>";
+        
+        std::string temp;
+        std::getline(std::cin, temp);
+        try {
+            LanguageIndex = std::stoi(temp);
+            if (LanguageIndex < 0 || LanguageIndex > 10)
+                throw std::invalid_argument("Invalid index");
+            break;
+        } catch(...) {
+            std::cout << "Invalid index." << std::endl;
+            continue;
+        }
+    }
+    
     char SnKey[16] = { };
-    GenerateSnKey(SnKey);
+    GenerateSnKey(SnKey, static_cast<NavicatLanguage>(LanguageIndex));
 
     double current_time
         = std::chrono::duration_cast<std::chrono::duration<double>>(
@@ -121,13 +187,13 @@ int main(int argc, char* argv[]) {
 
     BIO* BIO_file = BIO_new_file(argv[1], "r");
     if (BIO_file == nullptr) {
-        printf("Failed to read file.\n");
+        std::cout << "Failed to read file." << std::endl;
         return -1;
     }
 
     RSA* PrivateKey = PEM_read_bio_RSAPrivateKey(BIO_file, nullptr, nullptr, nullptr);
     if (PrivateKey == nullptr) {
-        printf("Failed to load private key.\n");
+        std::cout << "Failed to load private key." << std::endl;
         return -2;
     }
 
@@ -135,13 +201,15 @@ int main(int argc, char* argv[]) {
 
     std::string Name;
     std::string Organization;
+    
+    std::cin.clear();
     std::cout << "Your name: ";
     std::getline(std::cin, Name);
     std::cout << "Yout organization: ";
     std::getline(std::cin, Organization);
 
     std::string buffer;
-    printf("Input Request Code (in Base64), empty line to return:\n");
+    std::cout << "Input Request Code (in Base64), empty line to return:" << std::endl;
     while(true) {
         std::string temp;
         std::getline(std::cin, temp);
@@ -156,13 +224,13 @@ int main(int argc, char* argv[]) {
     std::string DeviceIdentifier("");
     EVP_DecodeBlock(enc_data, reinterpret_cast<const unsigned char*>(buffer.c_str()), buffer.length());
     if (RSA_private_decrypt(256, enc_data, reinterpret_cast<unsigned char*>(data), PrivateKey, RSA_PKCS1_PADDING) == -1) {
-        printf("Failed to decrypt data.\n");
+        std::cout << "Failed to decrypt data." << std::endl;
         return -3;
     }
 #ifdef _DEBUG
-    printf("-----------Begin Request Code Data---------------\n");
-    printf("%s\n", data);
-    printf("-----------End Request Code Data---------------\n");
+    std::cout << "-----------Begin Request Code Data---------------" << std::endl;
+    std::cout << data << std::endl;
+    std::cout <<"-----------End Request Code Data---------------" << std::endl;
 #endif
     // Get DeviceIdentifier from data.
     for (int i = 0, length = strlen(data) - 4; i < length; ++i) {
@@ -197,16 +265,17 @@ int main(int argc, char* argv[]) {
     );
 
 #ifdef _DEBUG
-    printf("-----------Begin Activation Code Data---------------\n");
-    printf("%s\n", data);
-    printf("-----------End Activation Code Data---------------\n");
+    std::cout << "-----------Begin Activation Code Data---------------" << std::endl;
+    std::cout << data << std::endl;
+    std::cout << "-----------End Activation Code Data---------------" << std::endl;
 #endif
 
     RSA_private_encrypt(strlen(data), reinterpret_cast<unsigned char*>(data), enc_data, PrivateKey, RSA_PKCS1_PADDING);
 
     char result[1024] = { };
     EVP_EncodeBlock(reinterpret_cast<unsigned char*>(result), enc_data, 256);
-    printf("Activation Code:\n%s\n", result);
+    std::cout << "Activation Code:" << std::endl;
+    std::cout << result << std::endl;
 
     RSA_free(PrivateKey);
     return 0;
