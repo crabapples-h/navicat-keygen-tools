@@ -180,26 +180,13 @@
 
 ## 4. How to build
 
+  * Before you build keygen, you should make sure you have installed OpenSSL.  
+    If you have `brew`, you can install it by `brew install openssl`.
+
    ```bash
    $ cd navicat-keygen
-   $ make release VER=NAVICAT_ENG
+   $ make release
    ```
-
-   `VER` must be specified, and supported `VER` are:  
-
-   | Navicat Language Version        | `VER` Macro |
-   |---------------------------------|-------------|
-   | For English version             | NAVICAT_ENG |
-   | For Simplified Chinese version  | NAVICAT_CHS |
-   | For Traditional Chinese version | NAVICAT_CHT |
-   | For Japanese version            | NAVICAT_JAP |
-   | For Polish version              | NAVICAT_POL |
-   | For Spanish version             | NAVICAT_SPA |
-   | For French version              | NAVICAT_FRE |
-   | For German version              | NAVICAT_GER |
-   | For Korean version              | NAVICAT_KOR |
-   | For Russian version             | NAVICAT_RUS |
-   | For Portuguese version          | NAVICAT_POR |
 
 ## 5. How to Use
   1. Build keygen.
