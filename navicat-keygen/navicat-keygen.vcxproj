@@ -71,23 +71,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win32\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win32\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win32\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win32\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

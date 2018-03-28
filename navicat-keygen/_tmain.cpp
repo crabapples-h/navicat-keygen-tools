@@ -11,8 +11,19 @@
 #include <openssl/pem.h>
 #include <openssl/des.h>
 
-#pragma comment(lib, "Crypt32.lib")
-#pragma comment(lib, "libcrypto.lib")
+// OpenSSL precompiled lib, download from https://www.npcglib.org/~stathis/blog/precompiled-openssl/, MSVC2015 version
+// direct link https://www.npcglib.org/~stathis/downloads/openssl-1.1.0f-vs2015.7z
+// x86: "D:\openssl-1.1.0f-vs2015\include" has been add to include path.    (modify it at project properties if necessary)
+//      "D:\openssl-1.1.0f-vs2015\lib" has been add to library path.        (modify it at project properties if necessary)
+// x64: "D:\openssl-1.1.0f-vs2015\include64" has been add to include path.  (modify it at project properties if necessary)
+//      "D:\openssl-1.1.0f-vs2015\lib64" has been add to library path.      (modify it at project properties if necessary)
+#ifdef _DEBUG
+#pragma comment(lib, "libcryptoMTd.lib")
+#else
+#pragma comment(lib, "libcryptoMT.lib")
+#endif
+#pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL lib
+#pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL lib
 
 #define NAVICAT_12
 #define NAVICAT_CHS

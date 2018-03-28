@@ -71,23 +71,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win32\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win32\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win32\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win32\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -98,6 +98,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -113,6 +114,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,6 +132,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,6 +152,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -158,7 +162,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="common.cpp" />
+    <ClCompile Include="EncryptPublicKey.cpp" />
+    <ClCompile Include="NavicatCrypto\aes.c" />
+    <ClCompile Include="NavicatCrypto\aes_constant.c" />
+    <ClCompile Include="NavicatCrypto\blowfish.c" />
+    <ClCompile Include="NavicatCrypto\sha1.c" />
+    <ClCompile Include="Solution0.cpp" />
+    <ClCompile Include="Solution1.cpp" />
     <ClCompile Include="_tmain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="def.hpp" />
+    <ClInclude Include="NavicatCrypto\aes.h" />
+    <ClInclude Include="NavicatCrypto\blowfish.h" />
+    <ClInclude Include="NavicatCrypto\NavicatCrypto.hpp" />
+    <ClInclude Include="NavicatCrypto\sha1.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
