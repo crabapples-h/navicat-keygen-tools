@@ -22,6 +22,90 @@
 
     If you have the corresponding private key, please tell me. I would be very appreciated for your generous.
 
+    __NOTICE:__
+
+    Start from __Navicat Premium 12.0.25__, Navicat do not load this public key from resource in `navicat.exe`. Actually the public key is stored in `libcc.dll` and encrypted. And to avoid being replaced easily, the public key is split into 5 parts:
+
+      1. At file offset `+ 0x1A12090` in `libcc.dll`, stored as __char string__:  
+
+         > "D75125B70767B94145B47C1CB3C0755E  
+         >  7CCB8825C5DCE0C58ACF944E08280140  
+         >  9A02472FAFFD1CD77864BB821AE36766  
+         >  FEEDE6A24F12662954168BFA314BD950  
+         >  32B9D82445355ED7BC0B880887D650F5"  
+
+      2. At file offset `+ 0x59D799` in `libcc.dll`, stored as __immediate value__ in a instruction:
+
+         > 0xFE 0xEA 0xBC 0x01
+
+         In decimal: `29158142`
+
+      3. At file offset `+ 0x1A11DA0` in `libcc.dll`, stored as __char string__:
+
+         > "E1CED09B9C2186BF71A70C0FE2F1E0AE  
+         >  F3BD6B75277AAB20DFAF3D110F75912B  
+         >  FB63AC50EC4C48689D1502715243A79F  
+         >  39FF2DE2BF15CE438FF885745ED54573  
+         >  850E8A9F40EE2FF505EB7476F95ADB78  
+         >  3B28CA374FAC4632892AB82FB3BF4715  
+         >  FCFE6E82D03731FC3762B6AAC3DF1C3B  
+         >  C646FE9CD3C62663A97EE72DB932A301  
+         >  312B4A7633100C8CC357262C39A2B3A6  
+         >  4B224F5276D5EDBDF0804DC3AC4B8351  
+         >  62BB1969EAEBADC43D2511D6E0239287  
+         >  81B167A48273B953378D3D2080CC0677  
+         >  7E8A2364F0234B81064C5C739A8DA28D  
+         >  C5889072BF37685CBC94C2D31D0179AD  
+         >  86D8E3AA8090D4F0B281BE37E0143746  
+         >  E6049CCC06899401264FA471C016A96C  
+         >  79815B55BBC26B43052609D9D175FBCD  
+         >  E455392F10E51EC162F51CF732E6BB39  
+         >  1F56BBFD8D957DF3D4C55B71CEFD54B1  
+         >  9C16D458757373E698D7E693A8FC3981  
+         >  5A8BF03BA05EA8C8778D38F9873D62B4  
+         >  460F41ACF997C30E7C3AF025FA171B5F  
+         >  5AD4D6B15E95C27F6B35AD61875E5505  
+         >  449B4E"
+
+      4. At file offset `+ 0x59D77F` in `libcc.dll`, stored as __immediate value__ in a instruction:
+
+         > 0x59 0x08 0x01 0x00          (in decimal )
+
+         In decimal: `67673`
+
+      5. At file offset `+ 0x1A11D8C` in `libcc.dll`, stored as __char string__:
+
+         > "92933"
+
+    Then output encrypted public key with format `"%s%d%s%d%s"`, the order is the same as it list:
+
+      > D75125B70767B94145B47C1CB3C0755E7CCB8825C5DCE0C58ACF944E082801409A02472FAFFD1CD77864BB821AE36766FEEDE6A24F12662954168BFA314BD95032B9D82445355ED7BC0B880887D650F529158142E1CED09B9C2186BF71A70C0FE2F1E0AEF3BD6B75277AAB20DFAF3D110F75912BFB63AC50EC4C48689D1502715243A79F39FF2DE2BF15CE438FF885745ED54573850E8A9F40EE2FF505EB7476F95ADB783B28CA374FAC4632892AB82FB3BF4715FCFE6E82D03731FC3762B6AAC3DF1C3BC646FE9CD3C62663A97EE72DB932A301312B4A7633100C8CC357262C39A2B3A64B224F5276D5EDBDF0804DC3AC4B835162BB1969EAEBADC43D2511D6E023928781B167A48273B953378D3D2080CC06777E8A2364F0234B81064C5C739A8DA28DC5889072BF37685CBC94C2D31D0179AD86D8E3AA8090D4F0B281BE37E0143746E6049CCC06899401264FA471C016A96C79815B55BBC26B43052609D9D175FBCDE455392F10E51EC162F51CF732E6BB391F56BBFD8D957DF3D4C55B71CEFD54B19C16D458757373E698D7E693A8FC39815A8BF03BA05EA8C8778D38F9873D62B4460F41ACF997C30E7C3AF025FA171B5F5AD4D6B15E95C27F6B35AD61875E5505449B4E6767392933
+
+    This encrypted public key can be decrypted by my another repo: [how-does-navicat-encrypt-password](https://github.com/DoubleLabyrinth/how-does-navicat-encrypt-password), while the key used is `b'23970790'`
+
+    Example:
+
+    ```cmd
+    E:\GitHub>git clone https://github.com/DoubleLabyrinth/how-does-navicat-encrypt-password.git
+    ...
+    E:\GitHub>cd how-does-navicat-encrypt-password\python3
+    E:\GitHub\how-does-navicat-encrypt-password\python3>python
+    Python 3.6.3 (v3.6.3:2c5fed8, Oct  3 2017, 18:11:49) [MSC v.1900 64 bit (AMD64)] on win32
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from NavicatCrypto import *
+    >>> cipher = Navicat11Crypto(b'23970790')
+    >>> print(cipher.DecryptString('D75125B70767B94145B47C1CB3C0755E7CCB8825C5DCE0C58ACF944E082801409A02472FAFFD1CD77864BB821AE36766FEEDE6A24F12662954168BFA314BD95032B9D82445355ED7BC0B880887D650F529158142E1CED09B9C2186BF71A70C0FE2F1E0AEF3BD6B75277AAB20DFAF3D110F75912BFB63AC50EC4C48689D1502715243A79F39FF2DE2BF15CE438FF885745ED54573850E8A9F40EE2FF505EB7476F95ADB783B28CA374FAC4632892AB82FB3BF4715FCFE6E82D03731FC3762B6AAC3DF1C3BC646FE9CD3C62663A97EE72DB932A301312B4A7633100C8CC357262C39A2B3A64B224F5276D5EDBDF0804DC3AC4B835162BB1969EAEBADC43D2511D6E023928781B167A48273B953378D3D2080CC06777E8A2364F0234B81064C5C739A8DA28DC5889072BF37685CBC94C2D31D0179AD86D8E3AA8090D4F0B281BE37E0143746E6049CCC06899401264FA471C016A96C79815B55BBC26B43052609D9D175FBCDE455392F10E51EC162F51CF732E6BB391F56BBFD8D957DF3D4C55B71CEFD54B19C16D458757373E698D7E693A8FC39815A8BF03BA05EA8C8778D38F9873D62B4460F41ACF997C30E7C3AF025FA171B5F5AD4D6B15E95C27F6B35AD61875E5505449B4E6767392933'))
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw1dqF3SkCaAAmMzs889I
+    qdW9M2dIdh3jG9yPcmLnmJiGpBF4E9VHSMGe8oPAy2kJDmdNt4BcEygvssEfginv
+    a5t5jm352UAoDosUJkTXGQhpAWMF4fBmBpO3EedG62rOsqMBgmSdAyxCSPBRJIOF
+    R0QgZFbRnU0frj34fiVmgYiLuZSAmIbs8ZxiHPdp1oD4tUpvsFci4QJtYNjNnGU2
+    WPH6rvChGl1IRKrxMtqLielsvajUjyrgOC6NmymYMvZNER3htFEtL1eQbCyTfDmt
+    YyQ1Wt4Ot12lxf0wVIR5mcGN7XCXJRHOFHSf1gzXWabRSvmt1nrl7sW6cjxljuuQ
+    awIDAQAB
+    -----END PUBLIC KEY-----
+    ```
+
   * __Request Code__
 
     It is a Base64 string that represents 256-bytes-long data, while the 256-bytes-long data is the cipher text of the __offline activation information__ encrypted by __Navicat Activation Public Key__.
@@ -166,20 +250,35 @@
   5. Input __Activation Code__, then offline activation is done.
 
 ## 4. How to use
-  1. Build patcher and keygen.
+  1. Build patcher and keygen in Release configuration or download the latest release.
 
-  2. Replace __Navicat Activation Public Key__ in `navicat.exe`.  
+  2. Replace __Navicat Activation Public Key__ in `navicat.exe` or `libcc.dll`.  
      Example:  
 
-     ```bash
-     E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe"
-     D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe has been backed up.
-     Public key has been replaced.
-     Success!
+     * For Navicat Premium version < 12.0.25
+       ```bash
+       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12"
+       D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe has been backed up.
+       Public key has been replaced.
+       Success!
+       ```
 
-     ```
+     * For Navicat Premium version >= 12.0.25
+       ```bash
+       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12"
+       D:\Program Files\PremiumSoft\Navicat Premium 12\libcc.dll has been backed up.
+       Public key has been replaced.
+       Success!
+       ```
+       You may wait for a few seconds or even longer, because patcher is search for a appropriate RSA key. Finally you will get `RegPrivateKey.pem` file at current directory.
 
-     You will get `RegPrivateKey.pem` file at current directory.
+       If you do not want to search, use `RegPrivateKey.pem` in my latest release, then:
+       ```bash
+       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12" RegPrivateKey.pem
+       D:\Program Files\PremiumSoft\Navicat Premium 12\libcc.dll has been backed up.
+       Public key has been replaced.
+       Success!
+       ```
 
   3. Then in console:
 
