@@ -46,7 +46,9 @@ int _tmain(int argc, TCHAR* argv[]) {
     BOOL status;
     if (NavicatMajorVersion <= 0x000C0000 && NavicatMinorVersion < 0x00190000) {                // for navicat ver < 12.0.25
         status = patcher::Solution0::Do(navicat_exe_path.c_str());
-    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x00190000) {        // for navicat ver == 12.0.25
+    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x00190000) {        // for navicat ver = 12.0.25
+        status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
+    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x001A0000) {        // for navicat ver = 12.0.26
         status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
     }
 
