@@ -3,16 +3,25 @@
 // Solution0 is for navicat premium of which the version < 12.0.25
 namespace patcher::Solution0 {
 
-    BOOL Do(LPCTSTR navicat_exe_path) {
+    BOOL Do(LPCTSTR navicat_exe_path, LPCTSTR prepared_key_file) {
         if (!BackupFile(navicat_exe_path))
             return FALSE;
 
-        RSA* PrivateKey = GenerateRSAKey();
-        if (PrivateKey == nullptr)
-            return FALSE;
+        RSA* PrivateKey = nullptr;
+        if (prepared_key_file == nullptr) {
+            PrivateKey = GenerateRSAKey();
+            if (PrivateKey == nullptr)
+                return FALSE;
 
-        if (!WriteRSAPrivateKeyToFile(TEXT("RegPrivateKey.pem"), PrivateKey))
-            return FALSE;
+            if (!WriteRSAPrivateKeyToFile(TEXT("RegPrivateKey.pem"), PrivateKey)) {
+                RSA_free(PrivateKey);
+                return FALSE;
+            }
+        } else {
+            PrivateKey = ReadRSAPrivateKeyFromFile(prepared_key_file);
+            if (PrivateKey == nullptr)
+                return FALSE;
+        }
 
         char* pem_pubkey = GetPEMText(PrivateKey);
         if (pem_pubkey == nullptr)
@@ -39,7 +48,7 @@ namespace patcher::Solution0 {
             delete[] pem_pubkey;
             return FALSE;
         } else {
-            _tprintf_s(TEXT("@[patcher::Solution0::Do]: Public key has been replaced.\r\n"));
+            _tprintf_s(TEXT("@[patcher::Solution0::Do]: Public key has been replaced by:\r\n%hs"), pem_pubkey);
 
             EndUpdateResource(hUpdater, FALSE);
             delete[] pem_pubkey;

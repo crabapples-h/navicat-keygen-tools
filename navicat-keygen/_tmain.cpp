@@ -1,4 +1,4 @@
-#include <tchar.h>
+﻿#include <tchar.h>
 #include <windows.h>
 #include <wincrypt.h>
 
@@ -26,9 +26,22 @@
 #pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL lib
 
 #define NAVICAT_12
-#define NAVICAT_CHS
 
-void GenerateSnKey(char(&SnKey)[16]) {
+enum NavicatLanguage {
+    English,
+    SimplifiedChinese,
+    TraditionalChinese,
+    Japanese,
+    Polish,
+    Spanish,
+    French,
+    German,
+    Korean,
+    Russian,
+    Portuguese
+};
+
+void GenerateSnKey(char(&SnKey)[16], NavicatLanguage _language) {
     static char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     static DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
 
@@ -37,42 +50,54 @@ void GenerateSnKey(char(&SnKey)[16]) {
     temp_SnKey[3] = rand();
     temp_SnKey[4] = rand();
 
-#if defined(NAVICAT_ENG)
-    temp_SnKey[5] = 0xAC;       // Must be 0xAC for English version.
-    temp_SnKey[6] = 0x88;       // Must be 0x88 for English version.
-#elif defined(NAVICAT_CHS)
-    temp_SnKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
-    temp_SnKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
-#elif defined(NAVICAT_CHT)
-    temp_SnKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
-    temp_SnKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
-#elif defined(NAVICAT_JAP)
-    temp_SnKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_POL)
-    temp_SnKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_SPA)
-    temp_SnKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_FRE)
-    temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
-    temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
-#elif defined(NAVICAT_GER)
-    temp_SnKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_KOR)
-    temp_SnKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_RUS)
-    temp_SnKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
-#elif defined(NAVICAT_POR)
-    temp_SnKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
-    temp_SnKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
-#else
-#error "Navicat product type is not specified."
-#endif
+    switch (_language) {
+        case English:
+            temp_SnKey[5] = 0xAC;       // Must be 0xAC for English version.
+            temp_SnKey[6] = 0x88;       // Must be 0x88 for English version.
+            break;
+        case SimplifiedChinese:
+            temp_SnKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
+            temp_SnKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
+            break;
+        case TraditionalChinese:
+            temp_SnKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
+            temp_SnKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+            break;
+        case Japanese:
+            temp_SnKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
+            break;
+        case Polish:
+            temp_SnKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
+            break;
+        case Spanish:
+            temp_SnKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
+            break;
+        case French:
+            temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
+            temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
+            break;
+        case German:
+            temp_SnKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
+            break;
+        case Korean:
+            temp_SnKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
+            break;
+        case Russian:
+            temp_SnKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
+            break;
+        case Portuguese:
+            temp_SnKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
+            temp_SnKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
+            break;
+        default:
+            break;
+    }
 
 #if defined(NAVICAT_12)
     temp_SnKey[7] = 0x65;   //  0x65 - commercial, 0x66 - non-commercial
@@ -173,6 +198,59 @@ BOOL GenerateLicense(RSA* RSAPrivateKey,
 #endif
 }
 
+RSA* ReadRSAPrivateKeyFromFile(LPCTSTR filename) {
+#ifdef UNICODE
+    int req_size = WideCharToMultiByte(CP_ACP, 0, filename, -1, nullptr, 0, nullptr, nullptr);
+    if (req_size == 0) {
+        _tprintf_s(TEXT("Failed to convert wchar* to char*. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> WideCharToMultiByte]\r\n"), GetLastError());
+        return FALSE;
+    }
+
+    char* temp_filename = new char[req_size]();
+    WideCharToMultiByte(CP_ACP, 0, filename, -1, temp_filename, req_size, nullptr, nullptr);
+
+    BIO* b = BIO_new(BIO_s_file());
+    if (b == nullptr) {
+        _tprintf_s(TEXT("Failed to create BIO object. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_new]\r\n"), ERR_get_error());
+        delete[] temp_filename;
+        return FALSE;
+    }
+
+    if (1 != BIO_read_filename(b, temp_filename)) {
+        _tprintf_s(TEXT("Failed to set target file of BIO. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_read_filename]\r\n"), ERR_get_error());
+
+        BIO_free_all(b);
+        delete[] temp_filename;
+        return FALSE;
+    }
+
+    delete[] temp_filename;
+#else
+    BIO* b = BIO_new(BIO_s_file());
+    if (b == nullptr) {
+        _tprintf_s(TEXT("Failed to create BIO object. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_new]\r\n"), ERR_get_error());
+        return FALSE;
+    }
+
+    if (1 != BIO_read_filename(b, filename)) {
+        _tprintf_s(TEXT("Failed to set target file of BIO. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_read_filename]\r\n"), ERR_get_error());
+
+        BIO_free_all(b);
+        return FALSE;
+    }
+#endif
+    RSA* ret = PEM_read_bio_RSAPrivateKey(b, nullptr, nullptr, nullptr);
+    if (ret == nullptr) {
+        _tprintf_s(TEXT("Failed to read RSA private key. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> PEM_read_bio_RSAPrivateKey]\r\n"), ERR_get_error());
+
+        BIO_free_all(b);
+        return nullptr;
+    } else {
+        BIO_free_all(b);
+        return ret;
+    }
+}
+
 int _tmain(int argc, TCHAR* argv[]) {
     if (argc != 2) {
         _tprintf_s(TEXT("Usage:\r\n"));
@@ -181,28 +259,48 @@ int _tmain(int argc, TCHAR* argv[]) {
     }
 
     srand(static_cast<unsigned int>(time(nullptr)));
-#ifdef UNICODE
-    char pem_file_path[MAX_PATH] = { };
-    sprintf_s(pem_file_path, "%S", argv[1]);
-#else
-    char* pem_file_path = argv[1];
-#endif
 
-    RSA* PrivateKey = nullptr;
-    {
-        BIO* PrivateKeyFile = BIO_new(BIO_s_file());
-        BIO_read_filename(PrivateKeyFile, pem_file_path);
-        PrivateKey = PEM_read_bio_RSAPrivateKey(PrivateKeyFile, nullptr, nullptr, nullptr);
-        BIO_free_all(PrivateKeyFile);
-    }
+    RSA* PrivateKey = ReadRSAPrivateKeyFromFile(argv[1]);
+    if (PrivateKey == nullptr) 
+        return 0;
 
-    if (PrivateKey == nullptr) {
-        _tprintf_s(TEXT("Failed to load private key.\r\n"));
-        return -1;
+    std::cout
+        << "Which is your Navicat language?" << std::endl
+        << "0. English" << std::endl
+        << "1. Simplified Chinese" << std::endl
+        << "2. Traditional Chinese" << std::endl
+        << "3. Japanese" << std::endl
+        << "4. Polish" << std::endl
+        << "5. Spanish" << std::endl
+        << "6. French" << std::endl
+        << "7. German" << std::endl
+        << "8. Korean" << std::endl
+        << "9. Russian" << std::endl
+        << "10. Portuguese" << std::endl
+        << std::endl;
+
+    int LanguageIndex = -1;
+    while (true) {
+        std::cout << "(input index)>";
+
+        std::string temp;
+        if (!std::getline(std::cin, temp)) {
+            RSA_free(PrivateKey);
+            return 0;
+        }
+        try {
+            LanguageIndex = std::stoi(temp);
+            if (LanguageIndex < 0 || LanguageIndex > 10)
+                throw std::invalid_argument("Invalid index");
+            break;
+        } catch (...) {
+            std::cout << "Invalid index." << std::endl;
+            continue;
+        }
     }
 
     char SnKey[16] = { };
-    GenerateSnKey(SnKey);
+    GenerateSnKey(SnKey, static_cast<NavicatLanguage>(LanguageIndex));
 
     std::string strName;
     std::string strOrganization;

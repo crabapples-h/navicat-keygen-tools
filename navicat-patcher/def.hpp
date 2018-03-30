@@ -41,7 +41,7 @@ namespace patcher {
     char* GetPEMText(RSA* PrivateKey);
 
     namespace Solution0 {
-        BOOL Do(LPCTSTR navicat_exe_path);
+        BOOL Do(LPCTSTR navicat_exe_path, LPCTSTR prepared_key_file = nullptr);
     }
 
     namespace Solution1 {
