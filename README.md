@@ -26,6 +26,8 @@
 
     Start from __Navicat Premium 12.0.25__, Navicat do not load this public key from resource in `navicat.exe`. Actually the public key is stored in `libcc.dll` and encrypted. And to avoid being replaced easily, the public key is split into 5 parts:
 
+    The content below is discovered from `libcc.dll` of Navicat Premium x64 12.0.25 Simplified Chinese version. SHA256 value is `607e0a84c75966b00f3d12fa833e91d159e4f51ac51b6ba66f98d0c3cbefdce0`. I do not guaranteed that __offset__ value is absolutely correct in other versions. But __char string__ and __immediate values__ is highly possible to be found.
+
       1. At file offset `+ 0x1A12090` in `libcc.dll`, stored as __char string__:  
 
          > "D75125B70767B94145B47C1CB3C0755E  
