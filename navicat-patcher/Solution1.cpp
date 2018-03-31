@@ -339,26 +339,31 @@ namespace patcher::Solution1 {
             _tprintf_s(TEXT("Failed to open libcc.dll. CODE: 0x%08x @[patcher::Solution1::Do -> CreateFile]\r\n"), GetLastError());
             return FALSE;
         }
+        
+        // Start from win8, lpNumberOfBytesWritten parameter in WriteFile can be null if lpOverlapped is null.
+        // But win7 is not. lpNumberOfBytesWritten cannot be null if lpOverlapped is null. 
+        // However MSDN does not mention that.
+        DWORD WrittenBytes;
 
         // start patch 0
-        _tprintf_s(TEXT("----------Start to do patch 0----------\r\n"));
+        _tprintf_s(TEXT("\r\nStart to do patch 0......\r\n"));
         if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[0], nullptr, FILE_BEGIN)) {
             _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
-
+        
         _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[0], encrypted_pem_pubkey0.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey0.c_str(), encrypted_pem_pubkey0.length(), nullptr, nullptr)) {
+        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey0.c_str(), encrypted_pem_pubkey0.length(), &WrittenBytes, nullptr)) {
             _tprintf_s(TEXT("Failed to write patch 0. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
 
-        _tprintf_s(TEXT("----------patch 0 done----------\r\n"));
+        _tprintf_s(TEXT("patch 0 done.....\r\n"));
 
         // start patch 1
-        _tprintf_s(TEXT("----------Start to do patch 1----------\r\n"));
+        _tprintf_s(TEXT("\r\nStart to do patch 1.....\r\n"));
         if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[1], nullptr, FILE_BEGIN)) {
             _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
             CloseHandle(hFile);
@@ -366,16 +371,16 @@ namespace patcher::Solution1 {
         }
 
         _tprintf_s(TEXT("At offset +0x%08x, write immediate value %d (type: uint32_t)\r\n"), Patch_Offset[1], imm1);
-        if (FALSE == WriteFile(hFile, &imm1, sizeof(imm1), nullptr, nullptr)) {
+        if (FALSE == WriteFile(hFile, &imm1, sizeof(imm1), &WrittenBytes, nullptr)) {
             _tprintf_s(TEXT("Failed to write patch 1. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
 
-        _tprintf_s(TEXT("----------patch 1 done----------\r\n"));
+        _tprintf_s(TEXT("patch 1 done.....\r\n"));
 
         // start patch 2
-        _tprintf_s(TEXT("----------Start to do patch 2----------\r\n"));
+        _tprintf_s(TEXT("\r\nStart to do patch 2.....\r\n"));
         if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[2], nullptr, FILE_BEGIN)) {
             _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
             CloseHandle(hFile);
@@ -383,16 +388,16 @@ namespace patcher::Solution1 {
         }
 
         _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[2], encrypted_pem_pubkey2.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey2.c_str(), encrypted_pem_pubkey2.length(), nullptr, nullptr)) {
+        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey2.c_str(), encrypted_pem_pubkey2.length(), &WrittenBytes, nullptr)) {
             _tprintf_s(TEXT("Failed to write patch 2. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
 
-        _tprintf_s(TEXT("----------patch 2 done----------\r\n"));
+        _tprintf_s(TEXT("patch 2 done.....\r\n"));
 
         // start patch 3
-        _tprintf_s(TEXT("----------Start to do patch 3----------\r\n"));
+        _tprintf_s(TEXT("\r\nStart to do patch 3.....\r\n"));
         if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[3], nullptr, FILE_BEGIN)) {
             _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
             CloseHandle(hFile);
@@ -400,16 +405,16 @@ namespace patcher::Solution1 {
         }
 
         _tprintf_s(TEXT("At offset +0x%08x, write immediate value %d (type: uint32_t)\r\n"), Patch_Offset[3], imm3);
-        if (FALSE == WriteFile(hFile, &imm3, sizeof(imm3), nullptr, nullptr)) {
+        if (FALSE == WriteFile(hFile, &imm3, sizeof(imm3), &WrittenBytes, nullptr)) {
             _tprintf_s(TEXT("Failed to write patch 3. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
 
-        _tprintf_s(TEXT("----------patch 3 done----------\r\n"));
+        _tprintf_s(TEXT("patch 3 done.....\r\n"));
 
         // start patch 4
-        _tprintf_s(TEXT("----------Start to do patch 4----------\r\n"));
+        _tprintf_s(TEXT("\r\nStart to do patch 4.....\r\n"));
         if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[4], nullptr, FILE_BEGIN)) {
             _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
             CloseHandle(hFile);
@@ -417,13 +422,13 @@ namespace patcher::Solution1 {
         }
 
         _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[4], encrypted_pem_pubkey4.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey4.c_str(), encrypted_pem_pubkey4.length(), nullptr, nullptr)) {
+        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey4.c_str(), encrypted_pem_pubkey4.length(), &WrittenBytes, nullptr)) {
             _tprintf_s(TEXT("Failed to write patch 4. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
             CloseHandle(hFile);
             return FALSE;
         }
 
-        _tprintf_s(TEXT("----------patch 4 done----------\r\n"));
+        _tprintf_s(TEXT("patch 4 done.....\r\n\r\n"));
 
         return TRUE;
     }

@@ -19,8 +19,8 @@
 #else
 #pragma comment(lib, "libcryptoMT.lib")
 #endif
-#pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL lib
-#pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL lib
+#pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL static lib
+#pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL static lib
 #pragma comment(lib, "version.lib")     // GetFileVersionInfoSize, GetFileVersionInfo, VerQueryValue are in this lib
 
 namespace patcher {
