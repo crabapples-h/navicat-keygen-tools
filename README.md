@@ -22,6 +22,10 @@
 
     If you have the corresponding private key, please tell me. I would be very appreciated for your generous.
 
+    __NOTICE:__
+
+    Start from __Navicat Premuim 12.0.24 for Mac__, the public key is no longer stored in __Navicat Premium.app/Contents/Resources/rpk__. Instead, the public key is stored in Navicat executable file __Navicat Premium.app/Contents/MacOS/Navicat Premium__. You can see it by searching string `"-----BEGIN PUBLIC KEY-----  "`.
+
   * __Request Code__
 
     It is a Base64 string that represents 256-bytes-long data, while the 256-bytes-long data is the cipher text of the __offline activation information__ encrypted by __Navicat Activation Public Key__.
@@ -183,15 +187,42 @@
   * Before you build keygen, you should make sure you have installed OpenSSL.  
     If you have `brew`, you can install it by `brew install openssl`.
 
-   ```bash
-   $ cd navicat-keygen
-   $ make release
-   ```
+    ```bash
+    $ cd navicat-keygen
+    $ make release
+    ```
+
+  * Build patcher if your Navicat version is or is after __12.0.24__.
+
+    ```bash
+    $ cd navicat-patcher
+    $ make release
+    ```
+
+    __NOTICE:__
+
+    For Navicat whose version is or is after __12.0.24__, if you want to use your own RSA key, please replace the content in `/navicat-patcher/main.c`
+
+    ```cpp
+    const char pubkey[9][72] = {
+    "-----BEGIN PUBLIC KEY-----",
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxqkTcfbKw8ysVygePlcB",
+    "oUAhCF6oniyP13iDtu85ZsHwqw8PnMyTp6n6FnMN9YinleIAy6NFveBu/vshTN8S",
+    "oXbYyy5AqdZ8CQpfvuriO9UNfgV1l7SFdPPpruFAmOw+uzA3GawMsg3QNK/htqJe",
+    "b4xKHFS04xC2AueE2RTmk6tJcL8TEBfRG7DEYOHPjebKl1NQ3ZIu15U97cCPYKO2",
+    "pWHzsb+Fr4Wj0DChLoxlXxaBcJ2ozogaq0tW2t4Aopvt9kRSuSK9HcgxICJM5ct4",
+    "naU91WFGWlw0+0JpiMIl5OnMbpak/5xQre9DL8zM8LjRy14I88txvXvhPEsWaYCO",
+    "1QIDAQAB",
+    "-----END PUBLIC KEY-----"
+    };
+    ```
+
+    with your own RSA public key before you build patcher.
 
 ## 5. How to Use
   1. Build keygen.
 
-  2. Generate RSA-2048 private key and public key.
+  2. Generate RSA-2048 private key and public key. __(Navicat Premium version < 12.0.24 ONLY)__
 
      ```bash
      $ openssl genrsa -out 2048key.pem 2048
@@ -200,9 +231,35 @@
 
      You will get two file: `2048key.pem` and `rpk`.
 
-  3. Replace `Navicat Premium.app/Contents/Resources/rpk` file by `rpk` file you just generated.
+     Now you do not need to generate RSA key. I've already prepared these two file:
 
-  4. In Terminal:
+       * `rpk` file is in `navicat-patcher` folder.
+
+       * `2048key.pem` is in `navicat-keygen` folder.
+
+  3. For Navicat Premium version < 12.0.24:
+
+       * Replace `Navicat Premium.app/Contents/Resources/rpk` file by `rpk` file.
+
+     For Navicat Premium version >= 12.0.24:
+
+       * Backup your `Navicat Premium.app/Contents/MacOS/Navicat Premium`.
+
+       * Run patcher:
+
+         ```bash
+         $ cd navicat-patcher
+         $ ./navicat-patcher <your navicat executable file path>
+         ```
+
+         Example:
+
+         ```bash
+         $ cd navicat-patcher
+         $ ./navicat-patcher /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
+         ```
+
+  4. Then goto `navicat-keygen` folder and in Terminal:
 
      ```bash
      $ ./navicat-keygen 2048key.pem
