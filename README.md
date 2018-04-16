@@ -243,7 +243,9 @@
 
      For Navicat Premium version >= 12.0.24:
 
-       * Backup your `Navicat Premium.app/Contents/MacOS/Navicat Premium`.
+       * Backup your `Navicat Premium.app/Contents/MacOS/Navicat Premium` and __all of your saved database connection configurations (with password)__.
+
+       * Delete all of passwords in `Keychain.app` that is saved by Navicat.
 
        * Run patcher:
 
@@ -257,6 +259,12 @@
          ```bash
          $ cd navicat-patcher
          $ ./navicat-patcher /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
+         ```
+
+       * Generate a self-signed code-sign certificate and always trust it. Then use `codesign` to re-sign `Navicat Premium.app`.
+
+         ```bash
+         $ codesign -f -s "Your self-signed code-sign certificate name" <path to Navicat Premium.app>
          ```
 
   4. Then goto `navicat-keygen` folder and in Terminal:
@@ -275,3 +283,5 @@
   7. Copy your request code and paste it in keygen. Leave empty line to tell keygen that your input ends.
 
   8. Then you will get activation code which looks like a Base64 string. Just copy it and paste it in Navicat `Manual Activation` window, then click `Activate`. If nothing is wrong, activation should be done successfully.
+
+  9. Finally, restore your database connection configurations if you have.
