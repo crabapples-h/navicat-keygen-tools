@@ -50,6 +50,8 @@ int _tmain(int argc, TCHAR* argv[]) {
         status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
     } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x001A0000) {        // for navicat ver = 12.0.26
         status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
+    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x001B0000) {        // for navicat ver = 12.0.27
+        status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
     }
 
     _tprintf_s(TEXT("%s\r\n"), status == TRUE ? TEXT("Success!") : TEXT("Failed!"));
