@@ -46,12 +46,13 @@ int _tmain(int argc, TCHAR* argv[]) {
     BOOL status;
     if (NavicatMajorVersion <= 0x000C0000 && NavicatMinorVersion < 0x00190000) {                // for navicat ver < 12.0.25
         status = patcher::Solution0::Do(navicat_exe_path.c_str());
-    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x00190000) {        // for navicat ver = 12.0.25
+    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion <= 0x001C0000) {        // for navicat ver <= 12.0.28
         status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
-    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x001A0000) {        // for navicat ver = 12.0.26
-        status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
-    } else if (NavicatMajorVersion == 0x000C0000 && NavicatMinorVersion == 0x001B0000) {        // for navicat ver = 12.0.27
-        status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
+    } else {
+        _tprintf_s(TEXT("Warning: Unknown version detected, still continue? [y/n] "));
+        TCHAR selection = _gettchar();
+        if (selection == 'Y' || selection == 'y')
+            status = patcher::Solution1::Do(libcc_dll_path.c_str(), argc == 3 ? argv[2] : nullptr);
     }
 
     _tprintf_s(TEXT("%s\r\n"), status == TRUE ? TEXT("Success!") : TEXT("Failed!"));
