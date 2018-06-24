@@ -75,8 +75,6 @@
 
     2. __data[2]__, __data[3]__ and __data[4]__ can be any byte. Just set them whatever you want.
 
-       _`May change when Navicat product changes. Uncertain yet. But it's very possible right.`_  
-
     3. __data[5]__ and __data[6]__ are related with your Navicat product language. It depends.
 
        ~~_`May change when Navicat product changes. Uncertain yet.`_~~  
@@ -113,11 +111,7 @@
        For __Navicat 12 x64__: High 4 bits must be `1100`, which is the binary of number `12`.  
        For __Navicat 11 x64__: High 4 bits must be `1011`, which is the binary of number `11`.  
 
-       _`Must change when version change. Confirmed by Navicat 12 for Mac x64 with IDA Pro 7.0`_  
-
     6. __data[9]__ is unknown, but you can set it `0xFD` or `0xFC` or `0xFB` if you want to use __not-for-resale license__. This must not be `0x00`. But other value is OK.
-
-       _`May change when Navicat product changes. Uncertain yet.`_  
 
        According to __Navicat 12 for Mac x64__ version, what IDA 7.0 indicates is that:
 
@@ -180,7 +174,7 @@
 
      4. Encode 256-byte-long data by Base64. The result is __Activation Code__.
 
-  5. Input __Activation Code__, then offline activation is done.
+     5. Input __Activation Code__, then offline activation is done.
 
 ## 4. How to build
 
@@ -261,7 +255,7 @@
          $ ./navicat-patcher /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
          ```
 
-       * Generate a self-signed code-sign certificate and always trust it. Then use `codesign` to re-sign `Navicat Premium.app`.
+       * __Generate a self-signed code-sign certificate and always trust it. Then use `codesign` to re-sign `Navicat Premium.app`.__
 
          ```bash
          $ codesign -f -s "Your self-signed code-sign certificate name" <path to Navicat Premium.app>
@@ -280,7 +274,7 @@
 
   6. Generally online activation will failed and Navicat will ask you do `Manual Activation`, just choose it.
 
-  7. Copy your request code and paste it in keygen. Leave empty line to tell keygen that your input ends.
+  7. Copy your request code and paste it in keygen. Leave empty line to tell keygen that your input ends (in other words, type `Enter` at least twice).
 
   8. Then you will get activation code which looks like a Base64 string. Just copy it and paste it in Navicat `Manual Activation` window, then click `Activate`. If nothing is wrong, activation should be done successfully.
 
