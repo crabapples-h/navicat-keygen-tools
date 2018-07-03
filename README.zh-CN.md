@@ -257,6 +257,14 @@
          $ codesign -f -s "Your self-signed code-sign certificate name" <path to Navicat Premium.app>
          ```
 
+         注意："Your self-signed code-sign certificate name"是你证书的名字，不是路径。
+          
+         例如：
+
+        ```bash
+        $ codesign -f -s "foobar" /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
+        ```
+
   4. 接下来，打开`Terminal.app`，并定位到`navicat-keygen`文件夹：
 
      ```bash
