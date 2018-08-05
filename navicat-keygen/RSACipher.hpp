@@ -16,251 +16,251 @@
 
 class RSACipher {
 private:
-	RSA* _RsaObj;
+    RSA * _RsaObj;
 
-	RSACipher() : _RsaObj(nullptr) {}
-	RSACipher(RSA* lpRsa) : _RsaObj(lpRsa) {}
+    RSACipher() : _RsaObj(nullptr) {}
+    RSACipher(RSA* lpRsa) : _RsaObj(lpRsa) {}
 
-	RSACipher(const RSACipher&) = delete;
-	RSACipher(RSACipher&&) = delete;
-	RSACipher& operator=(const RSACipher&) = delete;
-	RSACipher& operator=(RSACipher&&) = delete;
+    RSACipher(const RSACipher&) = delete;
+    RSACipher(RSACipher&&) = delete;
+    RSACipher& operator=(const RSACipher&) = delete;
+    RSACipher& operator=(RSACipher&&) = delete;
 
 public:
 
-	enum class KeyType {
-		PrivateKey,
-		PublicKey
-	};
+    enum class KeyType {
+        PrivateKey,
+        PublicKey
+    };
 
-	enum class KeyFormat {
-		NotSpecified,
-		PEM,
-		PKCS1
-	};
+    enum class KeyFormat {
+        NotSpecified,
+        PEM,
+        PKCS1
+    };
 
-	~RSACipher() {
-		if (_RsaObj)
-			RSA_free(_RsaObj);
-		_RsaObj = nullptr;
-	}
-	
-	static RSACipher* Create() {
-		RSACipher* aCipher = new RSACipher(RSA_new());
-		if (aCipher->_RsaObj == nullptr) {
-			delete aCipher;
-			aCipher = nullptr;
-		}
-		return aCipher;
-	}
+    ~RSACipher() {
+        if (_RsaObj)
+            RSA_free(_RsaObj);
+        _RsaObj = nullptr;
+    }
 
-	bool GenerateKey(int bits, unsigned long long e = RSA_F4) {
-		bool bSuccess = false;
-		BIGNUM* bn_e = nullptr;
+    static RSACipher* Create() {
+        RSACipher* aCipher = new RSACipher(RSA_new());
+        if (aCipher->_RsaObj == nullptr) {
+            delete aCipher;
+            aCipher = nullptr;
+        }
+        return aCipher;
+    }
 
-		bn_e = BN_new();
-		if (bn_e == nullptr)
-			goto ON_RSACipher_GenerateKey0_ERROR;
+    bool GenerateKey(int bits, unsigned long long e = RSA_F4) {
+        bool bSuccess = false;
+        BIGNUM* bn_e = nullptr;
 
-		if (!BN_set_word(bn_e, e)) 
-			goto ON_RSACipher_GenerateKey0_ERROR;
-		
-		if (!RSA_generate_key_ex(_RsaObj, bits, bn_e, nullptr))
-			goto ON_RSACipher_GenerateKey0_ERROR;
+        bn_e = BN_new();
+        if (bn_e == nullptr)
+            goto ON_RSACipher_GenerateKey0_ERROR;
 
-		bSuccess = true;
+        if (!BN_set_word(bn_e, e))
+            goto ON_RSACipher_GenerateKey0_ERROR;
 
-	ON_RSACipher_GenerateKey0_ERROR:
-		if (bn_e)
-			BN_free(bn_e);
-		return bSuccess;
-	}
+        if (!RSA_generate_key_ex(_RsaObj, bits, bn_e, nullptr))
+            goto ON_RSACipher_GenerateKey0_ERROR;
 
-	template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
-	bool ExportKeyToFile(const std::string& filename) {
-		static_assert(
-			_Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
-			"Not supported format."
-		);
+        bSuccess = true;
 
-		bool bSuccess = false;
-		BIO* bio_file = nullptr;
+    ON_RSACipher_GenerateKey0_ERROR:
+        if (bn_e)
+            BN_free(bn_e);
+        return bSuccess;
+    }
 
-		bio_file = BIO_new_file(filename.c_str(), "w");
-		if (bio_file == nullptr)
-			goto ON_RSACipher_ExportKeyToFile_0_ERROR;
+    template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
+    bool ExportKeyToFile(const std::string& filename) {
+        static_assert(
+            _Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
+            "Not supported format."
+        );
 
-		if (_Type == KeyType::PrivateKey) {
-			bSuccess = PEM_write_bio_RSAPrivateKey(bio_file, _RsaObj, nullptr, nullptr, 0, nullptr, nullptr) ? true : false;
-		} else {
-			if (_Format == KeyFormat::PEM)
-				bSuccess = PEM_write_bio_RSA_PUBKEY(bio_file, _RsaObj) ? true : false;
-			else if (_Format == KeyFormat::PKCS1)
-				bSuccess = PEM_write_bio_RSAPublicKey(bio_file, _RsaObj) ? true : false;
-		}
+        bool bSuccess = false;
+        BIO* bio_file = nullptr;
 
-	ON_RSACipher_ExportKeyToFile_0_ERROR:
-		return bSuccess;
-	}
+        bio_file = BIO_new_file(filename.c_str(), "w");
+        if (bio_file == nullptr)
+            goto ON_RSACipher_ExportKeyToFile_0_ERROR;
 
-	template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
-	std::string ExportKeyString() {
-		static_assert(
-			_Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
-			"Not supported format."
-		);
+        if (_Type == KeyType::PrivateKey) {
+            bSuccess = PEM_write_bio_RSAPrivateKey(bio_file, _RsaObj, nullptr, nullptr, 0, nullptr, nullptr) ? true : false;
+        } else {
+            if (_Format == KeyFormat::PEM)
+                bSuccess = PEM_write_bio_RSA_PUBKEY(bio_file, _RsaObj) ? true : false;
+            else if (_Format == KeyFormat::PKCS1)
+                bSuccess = PEM_write_bio_RSAPublicKey(bio_file, _RsaObj) ? true : false;
+        }
 
-		std::string KeyString;
-		BIO* bio_mem = nullptr;
-		int len = 0;
-		const char* lpdata = nullptr;
+    ON_RSACipher_ExportKeyToFile_0_ERROR:
+        return bSuccess;
+    }
 
-		bio_mem = BIO_new(BIO_s_mem());
-		if (bio_mem == nullptr)
-			goto ON_RSACipher_ExportKeyString_0_ERROR;
+    template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
+    std::string ExportKeyString() {
+        static_assert(
+            _Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
+            "Not supported format."
+        );
 
-		if (_Type == KeyType::PrivateKey) {
-			if (!PEM_write_bio_RSAPrivateKey(bio_mem, _RsaObj, nullptr, nullptr, 0, nullptr, nullptr))
-				goto ON_RSACipher_ExportKeyString_0_ERROR;
-		} else {
-			if (_Format == KeyFormat::PEM) {
-				if (!PEM_write_bio_RSA_PUBKEY(bio_mem, _RsaObj))
-					goto ON_RSACipher_ExportKeyString_0_ERROR;
-			} else if (_Format == KeyFormat::PKCS1) {
-				if (!PEM_write_bio_RSAPublicKey(bio_mem, _RsaObj))
-					goto ON_RSACipher_ExportKeyString_0_ERROR;
-			}
-		}
+        std::string KeyString;
+        BIO* bio_mem = nullptr;
+        int len = 0;
+        const char* lpdata = nullptr;
 
-		len = BIO_get_mem_data(bio_mem, &lpdata);
+        bio_mem = BIO_new(BIO_s_mem());
+        if (bio_mem == nullptr)
+            goto ON_RSACipher_ExportKeyString_0_ERROR;
 
-		KeyString.resize(len);
-		memcpy(KeyString.data(), lpdata, len);
+        if (_Type == KeyType::PrivateKey) {
+            if (!PEM_write_bio_RSAPrivateKey(bio_mem, _RsaObj, nullptr, nullptr, 0, nullptr, nullptr))
+                goto ON_RSACipher_ExportKeyString_0_ERROR;
+        } else {
+            if (_Format == KeyFormat::PEM) {
+                if (!PEM_write_bio_RSA_PUBKEY(bio_mem, _RsaObj))
+                    goto ON_RSACipher_ExportKeyString_0_ERROR;
+            } else if (_Format == KeyFormat::PKCS1) {
+                if (!PEM_write_bio_RSAPublicKey(bio_mem, _RsaObj))
+                    goto ON_RSACipher_ExportKeyString_0_ERROR;
+            }
+        }
 
-	ON_RSACipher_ExportKeyString_0_ERROR:
-		if (bio_mem)
-			BIO_free_all(bio_mem);
-		return KeyString;
-	}
+        len = BIO_get_mem_data(bio_mem, &lpdata);
 
-	template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
-	bool ImportKeyFromFile(const std::string& filename) {
-		static_assert(
-			_Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
-			"Not supported format."
-		);
+        KeyString.resize(len);
+        memcpy(KeyString.data(), lpdata, len);
 
-		bool bSuccess = false;
-		BIO* bio_file = nullptr;
-		RSA* _newRsaObj = nullptr;
+    ON_RSACipher_ExportKeyString_0_ERROR:
+        if (bio_mem)
+            BIO_free_all(bio_mem);
+        return KeyString;
+    }
 
-		bio_file = BIO_new_file(filename.c_str(), "r");
-		if (bio_file == nullptr)
-			goto ON_RSACipher_ImportKeyFromFile_0_ERROR;
+    template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
+    bool ImportKeyFromFile(const std::string& filename) {
+        static_assert(
+            _Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
+            "Not supported format."
+        );
 
-		if (_Type == KeyType::PrivateKey) {
-			_newRsaObj = PEM_read_bio_RSAPrivateKey(bio_file, nullptr, nullptr, nullptr);
-		} else {
-			if (_Format == KeyFormat::PEM)
-				_newRsaObj = PEM_read_bio_RSA_PUBKEY(bio_file, nullptr, nullptr, nullptr);
-			else if (_Format == KeyFormat::PKCS1)
-				_newRsaObj = PEM_read_bio_RSAPublicKey(bio_file, nullptr, nullptr, nullptr);
-		}
+        bool bSuccess = false;
+        BIO* bio_file = nullptr;
+        RSA* _newRsaObj = nullptr;
 
-		if (_newRsaObj) {
-			RSA_free(_RsaObj);
-			_RsaObj = _newRsaObj;
-			bSuccess = true;
-		}
+        bio_file = BIO_new_file(filename.c_str(), "r");
+        if (bio_file == nullptr)
+            goto ON_RSACipher_ImportKeyFromFile_0_ERROR;
 
-	ON_RSACipher_ImportKeyFromFile_0_ERROR:
-		if (bio_file)
-			BIO_free_all(bio_file);
-		return bSuccess;
-	}
+        if (_Type == KeyType::PrivateKey) {
+            _newRsaObj = PEM_read_bio_RSAPrivateKey(bio_file, nullptr, nullptr, nullptr);
+        } else {
+            if (_Format == KeyFormat::PEM)
+                _newRsaObj = PEM_read_bio_RSA_PUBKEY(bio_file, nullptr, nullptr, nullptr);
+            else if (_Format == KeyFormat::PKCS1)
+                _newRsaObj = PEM_read_bio_RSAPublicKey(bio_file, nullptr, nullptr, nullptr);
+        }
 
-	template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
-	bool ImportKeyString(const std::string& KeyString) {
-		static_assert(
-			_Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
-			"Not supported format."
-		);
+        if (_newRsaObj) {
+            RSA_free(_RsaObj);
+            _RsaObj = _newRsaObj;
+            bSuccess = true;
+        }
 
-		bool bSuccess = false;
-		BIO* bio_mem = nullptr;
-		RSA* _newRsaObj = nullptr;
+    ON_RSACipher_ImportKeyFromFile_0_ERROR:
+        if (bio_file)
+            BIO_free_all(bio_file);
+        return bSuccess;
+    }
 
-		bio_mem = BIO_new(BIO_s_mem());
-		if (bio_mem == nullptr)
-			goto ON_RSACipher_ImportKeyString_0_ERROR;
+    template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
+    bool ImportKeyString(const std::string& KeyString) {
+        static_assert(
+            _Type == KeyType::PrivateKey || (_Format == KeyFormat::PEM || _Format == KeyFormat::PKCS1),
+            "Not supported format."
+        );
 
-		BIO_puts(bio_mem, KeyString.c_str());
+        bool bSuccess = false;
+        BIO* bio_mem = nullptr;
+        RSA* _newRsaObj = nullptr;
 
-		if (_Type == KeyType::PrivateKey) {
-			_newRsaObj = PEM_read_bio_RSAPrivateKey(bio_mem, nullptr, nullptr, nullptr);
-		} else {
-			if (_Format == KeyFormat::PEM)
-				_newRsaObj = PEM_read_bio_RSA_PUBKEY(bio_mem, nullptr, nullptr, nullptr);
-			else if (_Format == KeyFormat::PKCS1)
-				_newRsaObj = PEM_read_bio_RSAPublicKey(bio_mem, nullptr, nullptr, nullptr);
-		}
+        bio_mem = BIO_new(BIO_s_mem());
+        if (bio_mem == nullptr)
+            goto ON_RSACipher_ImportKeyString_0_ERROR;
 
-		if (_newRsaObj) {
-			RSA_free(_RsaObj);
-			_RsaObj = _newRsaObj;
-			bSuccess = true;
-		}
+        BIO_puts(bio_mem, KeyString.c_str());
 
-	ON_RSACipher_ImportKeyString_0_ERROR:
-		if (bio_mem)
-			BIO_free_all(bio_mem);
-		return bSuccess;
-	}
+        if (_Type == KeyType::PrivateKey) {
+            _newRsaObj = PEM_read_bio_RSAPrivateKey(bio_mem, nullptr, nullptr, nullptr);
+        } else {
+            if (_Format == KeyFormat::PEM)
+                _newRsaObj = PEM_read_bio_RSA_PUBKEY(bio_mem, nullptr, nullptr, nullptr);
+            else if (_Format == KeyFormat::PKCS1)
+                _newRsaObj = PEM_read_bio_RSAPublicKey(bio_mem, nullptr, nullptr, nullptr);
+        }
 
-	template<KeyType _Type = KeyType::PublicKey>
-	int Encrypt(const void* from, int len, void* to, int padding) {
-		int write_bytes = 0;
+        if (_newRsaObj) {
+            RSA_free(_RsaObj);
+            _RsaObj = _newRsaObj;
+            bSuccess = true;
+        }
 
-		if (_Type == KeyType::PrivateKey) {
-			write_bytes = RSA_private_encrypt(len,
-											  reinterpret_cast<const unsigned char*>(from),
-											  reinterpret_cast<unsigned char*>(to),
-											  _RsaObj, 
-											  padding);
-		} else {
-			write_bytes = RSA_public_encrypt(len,
-											 reinterpret_cast<const unsigned char*>(from),
-											 reinterpret_cast<unsigned char*>(to),
-											 _RsaObj,
-											 padding);
-		}
+    ON_RSACipher_ImportKeyString_0_ERROR:
+        if (bio_mem)
+            BIO_free_all(bio_mem);
+        return bSuccess;
+    }
 
-		if (write_bytes == -1)
-			write_bytes = 0;
-		return write_bytes;
-	}
+    template<KeyType _Type = KeyType::PublicKey>
+    int Encrypt(const void* from, int len, void* to, int padding) {
+        int write_bytes = 0;
 
-	template<KeyType _Type = KeyType::PrivateKey>
-	int Decrypt(const void* from, int len, void* to, int padding) {
-		int write_bytes = 0;
+        if (_Type == KeyType::PrivateKey) {
+            write_bytes = RSA_private_encrypt(len,
+                                              reinterpret_cast<const unsigned char*>(from),
+                                              reinterpret_cast<unsigned char*>(to),
+                                              _RsaObj,
+                                              padding);
+        } else {
+            write_bytes = RSA_public_encrypt(len,
+                                             reinterpret_cast<const unsigned char*>(from),
+                                             reinterpret_cast<unsigned char*>(to),
+                                             _RsaObj,
+                                             padding);
+        }
 
-		if (_Type == KeyType::PrivateKey) {
-			write_bytes = RSA_private_decrypt(len,
-											  reinterpret_cast<const unsigned char*>(from),
-											  reinterpret_cast<unsigned char*>(to),
-											  _RsaObj,
-											  padding);
-		} else {
-			write_bytes = RSA_public_decrypt(len,
-											 reinterpret_cast<const unsigned char*>(from),
-											 reinterpret_cast<unsigned char*>(to),
-											 _RsaObj,
-											 padding);
-		}
+        if (write_bytes == -1)
+            write_bytes = 0;
+        return write_bytes;
+    }
 
-		if (write_bytes == -1)
-			write_bytes = 0;
-		return write_bytes;
-	}
+    template<KeyType _Type = KeyType::PrivateKey>
+    int Decrypt(const void* from, int len, void* to, int padding) {
+        int write_bytes = 0;
+
+        if (_Type == KeyType::PrivateKey) {
+            write_bytes = RSA_private_decrypt(len,
+                                              reinterpret_cast<const unsigned char*>(from),
+                                              reinterpret_cast<unsigned char*>(to),
+                                              _RsaObj,
+                                              padding);
+        } else {
+            write_bytes = RSA_public_decrypt(len,
+                                             reinterpret_cast<const unsigned char*>(from),
+                                             reinterpret_cast<unsigned char*>(to),
+                                             _RsaObj,
+                                             padding);
+        }
+
+        if (write_bytes == -1)
+            write_bytes = 0;
+        return write_bytes;
+    }
 
 };
