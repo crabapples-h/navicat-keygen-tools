@@ -19,4 +19,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="RSACipher.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NavicatKeygen.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

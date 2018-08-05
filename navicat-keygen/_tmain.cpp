@@ -1,387 +1,452 @@
-﻿#include <tchar.h>
+﻿#include <iostream>
+#include <ctime>
+
+#include <tchar.h>
 #include <windows.h>
-#include <wincrypt.h>
 
-#include <iostream>
-#include <string>
+#include "NavicatKeygen.hpp"
 
-#include <openssl/err.h>
-#include <openssl/bio.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/des.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
-// OpenSSL precompiled lib, download from https://www.npcglib.org/~stathis/blog/precompiled-openssl/, MSVC2015 version
-// direct link https://www.npcglib.org/~stathis/downloads/openssl-1.1.0f-vs2015.7z
-// x86: "D:\openssl-1.1.0f-vs2015\include" has been add to include path.    (modify it at project properties if necessary)
-//      "D:\openssl-1.1.0f-vs2015\lib" has been add to library path.        (modify it at project properties if necessary)
-// x64: "D:\openssl-1.1.0f-vs2015\include64" has been add to include path.  (modify it at project properties if necessary)
-//      "D:\openssl-1.1.0f-vs2015\lib64" has been add to library path.      (modify it at project properties if necessary)
-#ifdef _DEBUG
-#pragma comment(lib, "libcryptoMTd.lib")
-#else
-#pragma comment(lib, "libcryptoMT.lib")
-#endif
-#pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL static lib
-#pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL static lib
+bool ConvertToUTF8(LPCSTR from, std::string& to) {
+	bool bSuccess = false;
+	int len = 0;
+	LPWSTR lpUnicodeString = nullptr;
 
-#define NAVICAT_12
+	len = MultiByteToWideChar(CP_ACP, NULL, from, -1, NULL, 0);
+	if (len == 0)
+		goto ON_ConvertToUTF8_0_ERROR;
 
-enum NavicatLanguage {
-    English,
-    SimplifiedChinese,
-    TraditionalChinese,
-    Japanese,
-    Polish,
-    Spanish,
-    French,
-    German,
-    Korean,
-    Russian,
-    Portuguese
-};
+	lpUnicodeString = reinterpret_cast<LPWSTR>(HeapAlloc(GetProcessHeap(), 
+														 HEAP_ZERO_MEMORY, 
+														 len * sizeof(WCHAR)));
+	if (lpUnicodeString == nullptr)
+		goto ON_ConvertToUTF8_0_ERROR;
 
-void GenerateSnKey(char(&SnKey)[16], NavicatLanguage _language) {
-    static char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    static DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
+	if (!MultiByteToWideChar(CP_ACP, NULL, from, -1, lpUnicodeString, len))
+		goto ON_ConvertToUTF8_0_ERROR;
 
-    BYTE temp_SnKey[10] = { 0x68, 0x2a };   //  must start with 0x68, 0x2a
-    temp_SnKey[2] = rand();
-    temp_SnKey[3] = rand();
-    temp_SnKey[4] = rand();
+	len = WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, NULL, 0, NULL, NULL);
+	if (len == 0)
+		goto ON_ConvertToUTF8_0_ERROR;
 
-    switch (_language) {
-        case English:
-            temp_SnKey[5] = 0xAC;       // Must be 0xAC for English version.
-            temp_SnKey[6] = 0x88;       // Must be 0x88 for English version.
-            break;
-        case SimplifiedChinese:
-            temp_SnKey[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
-            temp_SnKey[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
-            break;
-        case TraditionalChinese:
-            temp_SnKey[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
-            temp_SnKey[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
-            break;
-        case Japanese:
-            temp_SnKey[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
-            break;
-        case Polish:
-            temp_SnKey[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
-            break;
-        case Spanish:
-            temp_SnKey[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
-            break;
-        case French:
-            temp_SnKey[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
-            temp_SnKey[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
-            break;
-        case German:
-            temp_SnKey[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
-            break;
-        case Korean:
-            temp_SnKey[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
-            break;
-        case Russian:
-            temp_SnKey[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
-            break;
-        case Portuguese:
-            temp_SnKey[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
-            temp_SnKey[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
-            break;
-        default:
-            break;
-    }
+	to.resize(len);
+	if (!WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, to.data(), len, NULL, NULL)) 
+		goto ON_ConvertToUTF8_0_ERROR;
 
-#if defined(NAVICAT_12)
-    temp_SnKey[7] = 0x65;   //  0x65 - commercial, 0x66 - non-commercial
-    temp_SnKey[8] = 0xC0;   //  High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
-#elif defined(NAVICAT_11)
-    temp_SnKey[7] = 0x15;   //  0x15 - commercial, 0x16 - non-commercial
-    temp_SnKey[8] = 0xB0;   //  High 4-bits = version number. Low 4-bits doesn't know, but can be used to delay activation time.
-#else
-#error "Navicat version is not specified."
-#endif
-    temp_SnKey[9] = 0x32;   // 0xFB is Not-For-Resale-30-days license.
-                            // 0xFC is Not-For-Resale-90-days license.
-                            // 0xFD is Not-For-Resale-365-days license.
-                            // 0xFE is Not-For-Resale license.
-                            // 0xFF is Site license.
-                            // Must not be 0x00. 0x01-0xFA is ok.
+	while (to.back() == 0)
+		to.pop_back();
 
-    DES_key_schedule schedule;
-    DES_set_key_unchecked(&DESKey, &schedule);
-    DES_cblock enc_temp_snKey;
+	bSuccess = true;
 
-    DES_ecb_encrypt(reinterpret_cast<const_DES_cblock*>(temp_SnKey + 2), &enc_temp_snKey, &schedule, DES_ENCRYPT);
-    memmove_s(temp_SnKey + 2, sizeof(enc_temp_snKey), enc_temp_snKey, sizeof(enc_temp_snKey));
-
-    SnKey[0] = EncodeTable[temp_SnKey[0] >> 3];
-    SnKey[1] = EncodeTable[(temp_SnKey[0] & 0x07) << 2 | temp_SnKey[1] >> 6];
-    SnKey[2] = EncodeTable[temp_SnKey[1] >> 1 & 0x1F];
-    SnKey[3] = EncodeTable[(temp_SnKey[1] & 0x1) << 4 | temp_SnKey[2] >> 4];
-    SnKey[4] = EncodeTable[(temp_SnKey[2] & 0xF) << 1 | temp_SnKey[3] >> 7];
-    SnKey[5] = EncodeTable[temp_SnKey[3] >> 2 & 0x1F];
-    SnKey[6] = EncodeTable[temp_SnKey[3] << 3 & 0x1F | temp_SnKey[4] >> 5];
-    SnKey[7] = EncodeTable[temp_SnKey[4] & 0x1F];
-
-    SnKey[8] = EncodeTable[temp_SnKey[5] >> 3];
-    SnKey[9] = EncodeTable[(temp_SnKey[5] & 0x07) << 2 | temp_SnKey[6] >> 6];
-    SnKey[10] = EncodeTable[temp_SnKey[6] >> 1 & 0x1F];
-    SnKey[11] = EncodeTable[(temp_SnKey[6] & 0x1) << 4 | temp_SnKey[7] >> 4];
-    SnKey[12] = EncodeTable[(temp_SnKey[7] & 0xF) << 1 | temp_SnKey[8] >> 7];
-    SnKey[13] = EncodeTable[temp_SnKey[8] >> 2 & 0x1F];
-    SnKey[14] = EncodeTable[temp_SnKey[8] << 3 & 0x1F | temp_SnKey[9] >> 5];
-    SnKey[15] = EncodeTable[temp_SnKey[9] & 0x1F];
-
-    _tprintf_s(TEXT("\r\n"));
-    _tprintf_s(TEXT("SnKey:\r\n"));
-    _tprintf_s(TEXT("%.4hs-%.4hs-%.4hs-%.4hs\r\n"), SnKey, SnKey + 4, SnKey + 8, SnKey + 12);
-    _tprintf_s(TEXT("\r\n"));
+ON_ConvertToUTF8_0_ERROR:
+	if (lpUnicodeString)
+		HeapFree(GetProcessHeap(), NULL, lpUnicodeString);
+	return bSuccess;
 }
 
-BOOL GenerateLicense(RSA* RSAPrivateKey,
-                     const char* SnKey,
-                     const char* Name,
-                     const char* Organization,
-                     const char* DeviceIdentifier) {
+bool ConvertToUTF8(LPCWSTR from, std::string& to) {
+	bool bSuccess = false;
+	int len = 0;
 
-    char LicenseJson[2048 / 8] = { };
-#if defined(NAVICAT_12)
-    sprintf_s(LicenseJson, "{\"K\":\"%.16s\", \"N\":\"%s\", \"O\":\"%s\", \"DI\":\"%s\"}", SnKey, Name, Organization, DeviceIdentifier);
-#elif defined(NAVICAT_11)
-    sprintf_s(LicenseJson, "{\"K\":\"%.16s\", \"N\":\"%s\", \"O\":\"%s\"}", SnKey, Name, Organization);
-#else
-#error "Navicat version is not specified."
-#endif
-    unsigned char EncryptedLicenseData[2048 / 8] = { };
-    if (RSA_private_encrypt(static_cast<int>(strlen(LicenseJson)),
-                            reinterpret_cast<uint8_t*>(LicenseJson),
-                            EncryptedLicenseData,
-                            RSAPrivateKey,
-                            RSA_PKCS1_PADDING) == -1) {
-        _tprintf_s(TEXT("Failed to encrypt license data.\r\n"));
-        return FALSE;
-    }
+	len = WideCharToMultiByte(CP_UTF8, NULL, from, -1, NULL, 0, NULL, NULL);
+	if (len == 0)
+		goto ON_ConvertToUTF8_1_ERROR;
 
-#if defined(NAVICAT_12)
-    DWORD LicenseStringLength = 1024;
-    TCHAR LicenseString[1024] = { };
-    if (!CryptBinaryToString(EncryptedLicenseData, sizeof(EncryptedLicenseData), CRYPT_STRING_BASE64, LicenseString, &LicenseStringLength)) {
-        _tprintf_s(TEXT("Cannot get Base64 string. CODE: 0x%08x\r\n"), GetLastError());
-        return FALSE;
-    }
+	to.resize(len);
+	if (!WideCharToMultiByte(CP_UTF8, NULL, from, -1, to.data(), len, NULL, NULL)) 
+		goto ON_ConvertToUTF8_1_ERROR;
+	
+	while (to.back() == 0)
+		to.pop_back();
 
-    _tprintf_s(TEXT("License:\r\n%s"), LicenseString);
-    return TRUE;
-#elif defined(NAVICAT_11)
-    HANDLE hLicenseFile = CreateFile(TEXT("license_file"), GENERIC_ALL, NULL, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hLicenseFile == NULL) {
-        _tprintf_s(TEXT("Failed to create \"license_file\".\r\n"));
-        return FALSE;
-    }
+	bSuccess = true;
 
-    if (!WriteFile(hLicenseFile, EncryptedLicenseData, sizeof(EncryptedLicenseData), nullptr, nullptr)) {
-        _tprintf_s(TEXT("Failed to write \"license_file\".\r\n"));
-        CloseHandle(hLicenseFile);
-        return FALSE;
-    }
-
-    CloseHandle(hLicenseFile);
-    return TRUE;
-#endif
+ON_ConvertToUTF8_1_ERROR:
+	return bSuccess;
 }
 
-RSA* ReadRSAPrivateKeyFromFile(LPCTSTR filename) {
-#ifdef UNICODE
-    int req_size = WideCharToMultiByte(CP_ACP, 0, filename, -1, nullptr, 0, nullptr, nullptr);
-    if (req_size == 0) {
-        _tprintf_s(TEXT("Failed to convert wchar* to char*. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> WideCharToMultiByte]\r\n"), GetLastError());
-        return FALSE;
-    }
+bool ConvertToUTF8(std::string& str) {
+	bool bSuccess = false;
 
-    char* temp_filename = new char[req_size]();
-    WideCharToMultiByte(CP_ACP, 0, filename, -1, temp_filename, req_size, nullptr, nullptr);
+	std::string temp;
+	bSuccess = ConvertToUTF8(str.c_str(), temp);
+	if (!bSuccess)
+		return false;
 
-    BIO* b = BIO_new(BIO_s_file());
-    if (b == nullptr) {
-        _tprintf_s(TEXT("Failed to create BIO object. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_new]\r\n"), ERR_get_error());
-        delete[] temp_filename;
-        return FALSE;
-    }
-
-    if (1 != BIO_read_filename(b, temp_filename)) {
-        _tprintf_s(TEXT("Failed to set target file of BIO. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_read_filename]\r\n"), ERR_get_error());
-
-        BIO_free_all(b);
-        delete[] temp_filename;
-        return FALSE;
-    }
-
-    delete[] temp_filename;
-#else
-    BIO* b = BIO_new(BIO_s_file());
-    if (b == nullptr) {
-        _tprintf_s(TEXT("Failed to create BIO object. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_new]\r\n"), ERR_get_error());
-        return FALSE;
-    }
-
-    if (1 != BIO_read_filename(b, filename)) {
-        _tprintf_s(TEXT("Failed to set target file of BIO. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> BIO_read_filename]\r\n"), ERR_get_error());
-
-        BIO_free_all(b);
-        return FALSE;
-    }
-#endif
-    RSA* ret = PEM_read_bio_RSAPrivateKey(b, nullptr, nullptr, nullptr);
-    if (ret == nullptr) {
-        _tprintf_s(TEXT("Failed to read RSA private key. CODE: 0x%08x @[ReadRSAPrivateKeyFromFile -> PEM_read_bio_RSAPrivateKey]\r\n"), ERR_get_error());
-
-        BIO_free_all(b);
-        return nullptr;
-    } else {
-        BIO_free_all(b);
-        return ret;
-    }
+	str = temp;
+	return true;
 }
 
-int _tmain(int argc, TCHAR* argv[]) {
-    if (argc != 2) {
-        _tprintf_s(TEXT("Usage:\r\n"));
-        _tprintf_s(TEXT("    navicat-keygen.exe <RSA-2048 PrivateKey(PEM file)>\r\n"));
-        return 0;
-    }
+std::string Base64Encode(const std::vector<uint8_t>& bytes) {
+	std::string Result;
+	DWORD pcchString = 0;
 
-    srand(static_cast<unsigned int>(time(nullptr)));
+	if (bytes.empty())
+		return Result;
 
-    RSA* PrivateKey = ReadRSAPrivateKeyFromFile(argv[1]);
-    if (PrivateKey == nullptr) 
-        return 0;
+	CryptBinaryToStringA(bytes.data(), 
+						 bytes.size(), 
+						 CRYPT_STRING_BASE64, 
+						 NULL, 
+						 &pcchString);
+	if (pcchString == 0)
+		return Result;
 
-    std::cout
-        << "Which is your Navicat language?" << std::endl
-        << "0. English" << std::endl
-        << "1. Simplified Chinese" << std::endl
-        << "2. Traditional Chinese" << std::endl
-        << "3. Japanese" << std::endl
-        << "4. Polish" << std::endl
-        << "5. Spanish" << std::endl
-        << "6. French" << std::endl
-        << "7. German" << std::endl
-        << "8. Korean" << std::endl
-        << "9. Russian" << std::endl
-        << "10. Portuguese" << std::endl
-        << std::endl;
+	Result.resize(pcchString + 1);
 
-    int LanguageIndex = -1;
-    while (true) {
-        std::cout << "(input index)>";
+	if (!CryptBinaryToStringA(bytes.data(),
+							  bytes.size(),
+							  CRYPT_STRING_BASE64,
+							  Result.data(),
+							  &pcchString))
+		Result.clear();
 
-        std::string temp;
-        if (!std::getline(std::cin, temp)) {
-            RSA_free(PrivateKey);
-            return 0;
-        }
-        try {
-            LanguageIndex = std::stoi(temp);
-            if (LanguageIndex < 0 || LanguageIndex > 10)
-                throw std::invalid_argument("Invalid index");
-            break;
-        } catch (...) {
-            std::cout << "Invalid index." << std::endl;
-            continue;
-        }
-    }
+	return Result;
+}
 
-    char SnKey[16] = { };
-    GenerateSnKey(SnKey, static_cast<NavicatLanguage>(LanguageIndex));
+std::vector<uint8_t> Base64Decode(std::string& str) {
+	std::vector<uint8_t> Result;
+	DWORD pcbBinary = 0;
 
-    std::string strName;
-    std::string strOrganization;
-    _tprintf_s(TEXT("Your name: "));
-    std::getline(std::cin, strName);
-    _tprintf_s(TEXT("Your organization: "));
-    std::getline(std::cin, strOrganization);
+	if (str.empty())
+		return Result;
 
-#if defined(NAVICAT_12)
-    std::string RequestCode;
-    _tprintf_s(TEXT("Input request code (in Base64), empty line to return:\r\n"));
-    while (true) {
-        std::string temp;
-        std::getline(std::cin, temp);
-        if (temp.empty())
-            break;
+	CryptStringToBinaryA(str.c_str(),
+						 NULL,
+						 CRYPT_STRING_BASE64,
+						 NULL,
+						 &pcbBinary,
+						 NULL,
+						 NULL);
+	if (pcbBinary == 0)
+		return Result;
 
-        RequestCode += temp;
-    }
-    
-    BYTE EncryptedRequestData[1024] = { };
-    DWORD EncryptedRequestDataLength = sizeof(EncryptedRequestData);
-    if (!CryptStringToBinaryA(RequestCode.c_str(), NULL, CRYPT_STRING_BASE64, EncryptedRequestData, &EncryptedRequestDataLength, NULL, NULL)) {
-        _tprintf_s(TEXT("Failed to decode Base64 string. CODE: 0x%08x\r\n"), GetLastError());
-        RSA_free(PrivateKey);
-        return GetLastError();
-    }
+	Result.resize(pcbBinary);
 
-    char RequestData[1024] = { };
-    if (RSA_private_decrypt(EncryptedRequestDataLength,
-                             EncryptedRequestData,
-                             reinterpret_cast<BYTE*>(RequestData),
-                             PrivateKey, RSA_PKCS1_PADDING) == -1) {
-        _tprintf_s(TEXT("Failed to decrypt request code.\r\n"));
-        RSA_free(PrivateKey);
-        return -2;
-    }
+	if (!CryptStringToBinaryA(str.c_str(),
+							  NULL,
+							  CRYPT_STRING_BASE64,
+							  Result.data(),
+							  &pcbBinary,
+							  NULL,
+							  NULL))
+		Result.clear();
 
-#ifdef _DEBUG
-    std::cout << "-----------Begin Request Code Data---------------" << std::endl;
-    std::cout << RequestData << std::endl;
-    std::cout << "-----------End Request Code Data---------------" << std::endl;
-#endif
+	return Result;
+}
 
-    //--------------------------------------------------------------------
-    std::string strDeviceIdentifier;
-    for (int i = 0, length = static_cast<int>(strlen(RequestData)) - 4; i < length; ++i) {
-        if (RequestData[i] == '"' &&
-            RequestData[i + 1] == 'D' &&
-            RequestData[i + 2] == 'I' &&
-            RequestData[i + 3] == '"') {
+void help() {
+	std::cout << "Usage:" << std::endl;
+	std::cout << "  navicat-keygen.exe <RSA-2048 PrivateKey(PEM file)>" << std::endl;
+}
 
-            char temp[256] = { };
-            int x = i + 4, j = 0;
-            while (RequestData[x] != '"' && x < length)
-                x++;
-            x++;
-            while (RequestData[x] != '"' && j < 256) {
-                temp[j++] = RequestData[x];
-                x++;
-            }
-            strDeviceIdentifier += temp;
-            break;
-        }
-    }
+bool GatherInformation(NavicatKeygen::Product& product, 
+					   NavicatKeygen::Language& language,
+					   uint8_t& version) {
+	int index = -1;
+	std::string temp;
 
-    if (strDeviceIdentifier.empty()) {
-        _tprintf_s(TEXT("Not a valid request code.\r\n"));
-        RSA_free(PrivateKey);
-        return -3;
-    }
+	std::cout << "Select Navicat product:" << std::endl
+		<< "0. DataModeler" << std::endl
+		<< "1. Premium" << std::endl
+		<< "2. MySQL" << std::endl
+		<< "3. PostgreSQL" << std::endl
+		<< "4. Oracle" << std::endl
+		<< "5. SQLServer" << std::endl
+		<< "6. SQLite" << std::endl
+		<< "7. MariaDB" << std::endl
+		<< std::endl;
 
-    //-------------------------------------------------------------------
+	while (true) {
+		std::cout << "(input index)> ";
+		if (!std::getline(std::cin, temp)) {
+			return false;
+		}
 
-    GenerateLicense(PrivateKey, SnKey, strName.c_str(), strOrganization.c_str(), strDeviceIdentifier.c_str());
-#elif defined(NAVICAT_11)
-    GenerateLicense(PrivateKey, SnKey, strName.c_str(), strOrganization.c_str(), nullptr);
-#else
-#error "Navicat version is not specified."
-#endif
+		try {
+			index = std::stoi(temp);
+			switch (index) {
+				case 0:
+					product = NavicatKeygen::Product::DataModeler;
+					break;
+				case 1:
+					product = NavicatKeygen::Product::Premium;
+					break;
+				case 2:
+					product = NavicatKeygen::Product::MySQL;
+					break;
+				case 3:
+					product = NavicatKeygen::Product::PostgreSQL;
+					break;
+				case 4:
+					product = NavicatKeygen::Product::Oracle;
+					break;
+				case 5:
+					product = NavicatKeygen::Product::SQLServer;
+					break;
+				case 6:
+					product = NavicatKeygen::Product::SQLite;
+					break;
+				case 7:
+					product = NavicatKeygen::Product::MariaDB;
+					break;
+				default:
+					throw std::invalid_argument("Invalid index");
+			}
+			break;
+		} catch (...) {
+			std::cout << "Invalid index." << std::endl;
+			continue;
+		}
+	}
 
-    RSA_free(PrivateKey);
-    return 0;
+	std::cout << std::endl;
+	std::cout << "Select product language:" << std::endl
+		<< "0. English" << std::endl
+		<< "1. Simplified Chinese" << std::endl
+		<< "2. Traditional Chinese" << std::endl
+		<< "3. Japanese" << std::endl
+		<< "4. Polish" << std::endl
+		<< "5. Spanish" << std::endl
+		<< "6. French" << std::endl
+		<< "7. German" << std::endl
+		<< "8. Korean" << std::endl
+		<< "9. Russian" << std::endl
+		<< "10. Portuguese" << std::endl
+		<< std::endl;
+
+	while (true) {
+		std::cout << "(input index)> ";
+		if (!std::getline(std::cin, temp)) {
+			return false;
+		}
+
+		try {
+			index = std::stoi(temp);
+			switch (index) {
+				case 0:
+					language = NavicatKeygen::Language::English;
+					break;
+				case 1:
+					language = NavicatKeygen::Language::SimplifiedChinese;
+					break;
+				case 2:
+					language = NavicatKeygen::Language::TraditionalChinese;
+					break;
+				case 3:
+					language = NavicatKeygen::Language::Japanese;
+					break;
+				case 4:
+					language = NavicatKeygen::Language::Polish;
+					break;
+				case 5:
+					language = NavicatKeygen::Language::Spanish;
+					break;
+				case 6:
+					language = NavicatKeygen::Language::French;
+					break;
+				case 7:
+					language = NavicatKeygen::Language::German;
+					break;
+				case 8:
+					language = NavicatKeygen::Language::Korean;
+					break;
+				case 9:
+					language = NavicatKeygen::Language::Russian;
+					break;
+				case 10:
+					language = NavicatKeygen::Language::Portuguese;
+					break;
+				default:
+					throw std::invalid_argument("Invalid index");
+			}
+			break;
+		} catch (...) {
+			std::cout << "Invalid index." << std::endl;
+			continue;
+		}
+	}
+
+	std::cout << std::endl;
+	while (true) {
+		std::cout << "(input major version number)> ";
+		if (!std::getline(std::cin, temp)) {
+			return false;
+		}
+
+		try {
+			version = std::stoi(temp);
+			break;
+		} catch (...) {
+			std::cout << "Invalid index." << std::endl;
+			continue;
+		}
+	}
+
+	std::cout << std::endl;
+}
+
+int _tmain(int argc, LPTSTR argv[]) {
+	if (argc != 2) {
+		help();
+		return 0;
+	}
+
+	std::string RSAPrivateKeyPath;
+	RSACipher* cipher = nullptr;
+	std::string RequestCode_b64;
+	std::string ResponseCode_b64;
+	std::vector<uint8_t> RequestCode;
+	std::vector<uint8_t> ResponseCode;
+	char RequestInfo[256] = {};
+	char ResponseInfo[256] = {};
+
+	rapidjson::Document json;
+
+	NavicatKeygen keygen;
+	NavicatKeygen::Product product;
+	NavicatKeygen::Language language;
+	uint8_t version = 0;
+	std::string username;
+	std::string organization;
+
+	cipher = RSACipher::Create();
+	if (cipher == nullptr) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "Failed to create RSACipher." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	if (!ConvertToUTF8(argv[1], RSAPrivateKeyPath)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "ConvertToUTF8 fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	if (!cipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey>(RSAPrivateKeyPath)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "ImportKeyFromFile fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	GatherInformation(product, language, version);
+
+	keygen.Generate(version, language, product);
+	std::cout << "Serial number:" << std::endl;
+	std::cout << keygen.GetFormatedKey() << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Your name: ";
+	if (!std::getline(std::cin, username))
+		goto ON_tmain_ERROR;
+	if (!ConvertToUTF8(username)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "ConvertToUTF8 fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	std::cout << "Your organization: ";
+	if (!std::getline(std::cin, organization))
+		goto ON_tmain_ERROR;
+	if (!ConvertToUTF8(organization)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "ConvertToUTF8 fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	std::cout << "Input request code (in Base64), input empty line to end:" << std::endl;
+	while (true) {
+		std::string temp;
+		if (!std::getline(std::cin, temp))
+			goto ON_tmain_ERROR;
+
+		if (temp.empty())
+			break;
+
+		RequestCode_b64 += temp;
+	}
+
+	RequestCode = Base64Decode(RequestCode_b64);
+	if (RequestCode.empty()) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "Base64Decode fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	if (!cipher->Decrypt(RequestCode.data(),
+						 RequestCode.size(),
+						 RequestInfo,
+						 RSA_PKCS1_PADDING)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "Decrypt<RSACipher::KeyType::PrivateKey> fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	std::cout << "Request Info:" << std::endl;
+	std::cout << RequestInfo << std::endl << std::endl;
+
+	json.Parse(RequestInfo);
+	json.RemoveMember("P");
+
+	{
+		rapidjson::Value N_Key;
+		rapidjson::Value N_Value;
+		rapidjson::Value O_Key;
+		rapidjson::Value O_Value;
+		rapidjson::Value T_Key;
+		rapidjson::Value T_Value;
+		rapidjson::StringBuffer buffer;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+		N_Key.SetString("N", 1);
+		N_Value.SetString(username.c_str(), username.length());
+		O_Key.SetString("O", 1);
+		O_Value.SetString(organization.c_str(), organization.length());
+		T_Key.SetString("T", 1);
+		T_Value.SetUint(std::time(nullptr));
+
+		json.AddMember(N_Key, N_Value, json.GetAllocator());
+		json.AddMember(O_Key, O_Value, json.GetAllocator());
+		json.AddMember(T_Key, T_Value, json.GetAllocator());
+
+		json.Accept(writer);
+		if (buffer.GetSize() > 240) {
+			std::cout << "Response info too long." << std::endl;
+			goto ON_tmain_ERROR;
+		}
+
+		memcpy(ResponseInfo, buffer.GetString(), buffer.GetSize());
+	}
+
+	std::cout << "Response Info:" << std::endl;
+	std::cout << ResponseInfo << std::endl << std::endl;
+
+	ResponseCode.resize(256);
+
+	if (!cipher->Encrypt<RSACipher::KeyType::PrivateKey>(ResponseInfo,
+														 strlen(ResponseInfo),
+														 ResponseCode.data(),
+														 RSA_PKCS1_PADDING)) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "Encrypt<RSACipher::KeyType::PrivateKey> fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	ResponseCode_b64 = Base64Encode(ResponseCode);
+	if (ResponseCode_b64.empty()) {
+		std::cout << "@Function: " << __FUNCSIG__ << " LINE: " << __LINE__ << std::endl;
+		std::cout << "Base64Encode fails." << std::endl;
+		goto ON_tmain_ERROR;
+	}
+
+	std::cout << "License:" << std::endl;
+	std::cout << ResponseCode_b64 << std::endl;
+
+ON_tmain_ERROR:
+	if (cipher)
+		delete cipher;
+	return 0;
 }
