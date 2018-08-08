@@ -158,6 +158,7 @@ bool GatherInformation(NavicatKeygen::Product& product,
         << "5. SQLServer" << std::endl
         << "6. SQLite" << std::endl
         << "7. MariaDB" << std::endl
+        << "8. MongoDB" << std::endl
         << std::endl;
 
     while (true) {
@@ -192,6 +193,9 @@ bool GatherInformation(NavicatKeygen::Product& product,
                     break;
                 case 7:
                     product = NavicatKeygen::Product::MariaDB;
+                    break;
+                case 8:
+                    product = NavicatKeygen::Product::MongoDB;
                     break;
                 default:
                     throw std::invalid_argument("Invalid index");
