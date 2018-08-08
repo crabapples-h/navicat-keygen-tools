@@ -28,7 +28,8 @@ public:
         Oracle,
         SQLServer,
         SQLite,
-        MariaDB
+        MariaDB,
+        MongoDB
     };
 private:
     std::random_device rand_dev;
@@ -112,6 +113,9 @@ private:
                 break;
             case Product::MariaDB:
                 data[7] = 0x7C;
+                break;
+            case Product::MongoDB:
+                data[7] = 0x80;
                 break;
             default:
                 break;
