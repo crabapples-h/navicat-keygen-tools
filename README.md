@@ -178,7 +178,7 @@
        |Navicat SQL Server   |0x74      |0x75    |0x76       |0x77      |
        |Navicat SQLite       |0x78      |0x79    |0x7A       |0x7B      |
        |Navicat MariaDB      |0x7C      |0x7D    |0x7E       |0x7F      |
-       |Navicat MongoDB      |0x80      |        |           |          |
+       |Navicat MongoDB      |0x80      |0x81    |0x82       |          |
 
     5. High 4 bits of __data[8]__ represents __major version number__. Low 4 bits is unknown, but we can use it to delay activation deadline. Possible value is `0000` or `0001`.
 
