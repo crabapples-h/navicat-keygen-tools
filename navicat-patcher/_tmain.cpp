@@ -115,6 +115,8 @@ int _tmain(int argc, TCHAR* argv[]) {
         do {
             cipher->GenerateKey(2048);
         } while (patcher::Solution0::CheckKey(cipher) && patcher::Solution1::CheckKey(cipher));
+        cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>("RegPrivateKey.pem");
+        _tprintf_s(TEXT("New RSA private key has been saved to RegPrivateKey.pem.\n"));
     }
 
     // ------------------
