@@ -3,323 +3,365 @@
 // Solution1 is for navicat premium of which the version = 12.0.25
 namespace patcher::Solution1 {
 
-    static BOOL CheckRSAKeyIsAppropriate(RSA* PrivateKey) {
-        char* pem_pubkey = GetPEMText(PrivateKey);
-        if (pem_pubkey == nullptr)
-            return FALSE;
+    static std::Tstring InstallationPath;
 
-        std::string encrypted_pem_text = EncryptPublicKey(pem_pubkey, strlen(pem_pubkey));
-        delete[] pem_pubkey;
+    static const CHAR Keyword0[] = 
+        "D75125B70767B94145B47C1CB3C0755E"
+        "7CCB8825C5DCE0C58ACF944E08280140"
+        "9A02472FAFFD1CD77864BB821AE36766"
+        "FEEDE6A24F12662954168BFA314BD950"
+        "32B9D82445355ED7BC0B880887D650F5";
+
+    static const DWORD KeywordSize0 = sizeof(Keyword0) - 1;
+
+    static const uint8_t Keyword1[] = {
+        0xFE, 0xEA, 0xBC, 0x01
+    };
+
+    static const DWORD KeywordSize1 = sizeof(Keyword1);
+
+    static const CHAR Keyword2[] =
+        "E1CED09B9C2186BF71A70C0FE2F1E0AE"
+        "F3BD6B75277AAB20DFAF3D110F75912B"
+        "FB63AC50EC4C48689D1502715243A79F"
+        "39FF2DE2BF15CE438FF885745ED54573"
+        "850E8A9F40EE2FF505EB7476F95ADB78"
+        "3B28CA374FAC4632892AB82FB3BF4715"
+        "FCFE6E82D03731FC3762B6AAC3DF1C3B"
+        "C646FE9CD3C62663A97EE72DB932A301"
+        "312B4A7633100C8CC357262C39A2B3A6"
+        "4B224F5276D5EDBDF0804DC3AC4B8351"
+        "62BB1969EAEBADC43D2511D6E0239287"
+        "81B167A48273B953378D3D2080CC0677"
+        "7E8A2364F0234B81064C5C739A8DA28D"
+        "C5889072BF37685CBC94C2D31D0179AD"
+        "86D8E3AA8090D4F0B281BE37E0143746"
+        "E6049CCC06899401264FA471C016A96C"
+        "79815B55BBC26B43052609D9D175FBCD"
+        "E455392F10E51EC162F51CF732E6BB39"
+        "1F56BBFD8D957DF3D4C55B71CEFD54B1"
+        "9C16D458757373E698D7E693A8FC3981"
+        "5A8BF03BA05EA8C8778D38F9873D62B4"
+        "460F41ACF997C30E7C3AF025FA171B5F"
+        "5AD4D6B15E95C27F6B35AD61875E5505"
+        "449B4E";
+
+    static const DWORD KeywordSize2 = sizeof(Keyword2) - 1;
+
+    static const uint8_t Keyword3[] = {
+        0x59, 0x08, 0x01, 0x00
+    };
+
+    static const DWORD KeywordSize3 = sizeof(Keyword3);
+
+    static const CHAR Keyword4[] = "92933";
+
+    static const DWORD KeywordSize4 = sizeof(Keyword4) - 1;
+
+    static DWORD KeywordOffset[5] = { -1, -1, -1, -1, -1 };
+
+    static LPCTSTR TargetName = TEXT("libcc.dll");
+
+    static HANDLE hTarget = INVALID_HANDLE_VALUE;
+    static HANDLE hTargetMap = NULL;
+    static PVOID lpFileContent = NULL;
+
+    BOOL Init(const std::Tstring& Path) {
+        BOOL bSuccess = FALSE;
+        DWORD dwLastError = ERROR_SUCCESS;
+        DWORD attr = INVALID_FILE_ATTRIBUTES;
+
+        attr = GetFileAttributes(Path.c_str());
+        if (attr == INVALID_FILE_ATTRIBUTES) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ GetFileAttributes. CODE: 0x%08X\n"), dwLastError);
+            goto ON_Init_ERROR;
+        }
+
+        if ((attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Error: Path is not a directory.\n"));
+            goto ON_Init_ERROR;
+        }
+
+        InstallationPath = Path;
+        if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
+            InstallationPath.push_back(TEXT('\\'));
+
+        bSuccess = TRUE;
+
+    ON_Init_ERROR:
+        return bSuccess;
+    }
+
+    BOOL CheckKey(RSACipher* cipher) {
+        BOOL bOk = FALSE;
+        std::string RSAPublicKeyPEM;
+
+        RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+        if (RSAPublicKeyPEM.empty()) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: cipher->ExportKeyString failed.\n"));
+            return FALSE;
+        }
+
+        [](std::string& str, const std::string& OldSub, const std::string& NewSub) {
+            std::string::size_type pos = 0;
+            std::string::size_type srclen = OldSub.size();
+            std::string::size_type dstlen = NewSub.size();
+
+            while ((pos = str.find(OldSub, pos)) != std::string::npos) {
+                str.replace(pos, srclen, NewSub);
+                pos += dstlen;
+            }
+        } (RSAPublicKeyPEM, "\n", "\r\n");  // replace '\n' to '\r\n'
+
+        std::string encrypted_pem_text = EncryptPublicKey(RSAPublicKeyPEM.c_str(),
+                                                          RSAPublicKeyPEM.length());
 
         if (encrypted_pem_text[160] > '9' || encrypted_pem_text[160] < '1') 
             return FALSE;
+
         for (int i = 1; i < 8; ++i)
             if (encrypted_pem_text[160 + i] > '9' || encrypted_pem_text[160 + i] < '0') 
                 return FALSE;
 
         if (encrypted_pem_text[910] > '9' || encrypted_pem_text[910] < '1') 
             return FALSE;
+
         for (int i = 1; i < 5; ++i)
             if (encrypted_pem_text[910 + i] > '9' || encrypted_pem_text[910 + i] < '0')
                 return FALSE;
-            
+
         return TRUE;
     }
 
-    static RSA* GenerateAppropriateRSAKey() {
-        while (true) {
-            RSA* Key = GenerateRSAKey();
-            if (Key == nullptr)
-                return nullptr;
+    static PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName) {
+        IMAGE_DOS_HEADER* pFileHeader = NULL;
+        IMAGE_NT_HEADERS* pNtHeader = NULL;
+        IMAGE_SECTION_HEADER* pSectionHeaders = NULL;
 
-            if (CheckRSAKeyIsAppropriate(Key)) {
-                return Key;
-            } else {
-                RSA_free(Key);
-            }
-        }
+        pFileHeader = (IMAGE_DOS_HEADER*)lpBase;
+        if (pFileHeader->e_magic != IMAGE_DOS_SIGNATURE)
+            return NULL;
+
+        pNtHeader = (IMAGE_NT_HEADERS*)((BYTE*)lpBase + pFileHeader->e_lfanew);
+        if (pNtHeader->Signature != IMAGE_NT_SIGNATURE)
+            return NULL;
+
+        pSectionHeaders = (IMAGE_SECTION_HEADER*)((BYTE*)pNtHeader +
+                                                  offsetof(IMAGE_NT_HEADERS, OptionalHeader) +
+                                                  pNtHeader->FileHeader.SizeOfOptionalHeader);
+        for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; ++i)
+            if (_stricmp((const char*)pSectionHeaders[i].Name, lpSectionName) == 0)
+                return pSectionHeaders + i;
+
+        return NULL;
     }
 
-    static BOOL FindPatchOffset(LPCTSTR libcc_dll_path, DWORD Offset[5]) {
-        Offset[0] = 0;
-        Offset[1] = 0;
-        Offset[2] = 0;
-        Offset[3] = 0;
-        Offset[4] = 0;
-
-        HANDLE h_libcc = CreateFile(libcc_dll_path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (h_libcc == INVALID_HANDLE_VALUE) {
-            _tprintf_s(TEXT("Failed to open libcc.dll. CODE: 0x%08x @[FindPatchOffset -> CreateFile]\r\n"), GetLastError());
-            return FALSE;
-        }
-
-        // DWORD is enough, you know libcc.dll cannot be larger than 4GB
-        DWORD libcc_size = GetFileSize(h_libcc, nullptr);
-        HANDLE h_libcc_map = CreateFileMapping(h_libcc, nullptr, PAGE_READONLY, 0, 0, nullptr);
-        if (h_libcc_map == NULL) {
-            _tprintf_s(TEXT("Failed to create mapping for libcc.dll. CODE: 0x%08x @[FindPatchOffset -> CreateFileMapping]\r\n"), GetLastError());
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        const uint8_t* libcc = reinterpret_cast<const uint8_t*>(MapViewOfFile(h_libcc_map, FILE_MAP_READ, 0, 0, 0));
-        if (libcc == nullptr) {
-            _tprintf_s(TEXT("Failed to map libcc.dll. CODE: 0x%08x @[FindPatchOffset -> MapViewOfFile]\r\n"), GetLastError());
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        const IMAGE_DOS_HEADER* libcc_dos_header = reinterpret_cast<const IMAGE_DOS_HEADER*>(libcc);
-
-        // check dos signature
-        if (libcc_dos_header->e_magic != IMAGE_DOS_SIGNATURE) {
-            _tprintf_s(TEXT("libcc.dll does not have a valid DOS header. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        const IMAGE_NT_HEADERS* libcc_nt_header = reinterpret_cast<const IMAGE_NT_HEADERS*>(libcc + libcc_dos_header->e_lfanew);
-
-        // check nt signature
-        if (libcc_nt_header->Signature != IMAGE_NT_SIGNATURE) {
-            _tprintf_s(TEXT("libcc.dll does not have a valid NT header. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        // check if a dll
-        if ((libcc_nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL) == 0) {
-            _tprintf_s(TEXT("libcc.dll is not a DLL file. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        // check if 32-bits or 64-bits
-#if defined(_M_X64)
-        if (libcc_nt_header->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 || libcc_nt_header->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
-            _tprintf_s(TEXT("libcc.dll is not a 64-bits DLL file. @[FindPatchOffset]\r\n"));
-#elif defined(_M_IX86)
-        if (libcc_nt_header->FileHeader.Machine != IMAGE_FILE_MACHINE_I386 || libcc_nt_header->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC) {
-#else
-#error "unknown arch"
-#endif
-            _tprintf_s(TEXT("libcc.dll is not a 32-bits DLL file. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        WORD section_num = libcc_nt_header->FileHeader.NumberOfSections;
-        const IMAGE_SECTION_HEADER* libcc_section_headers = reinterpret_cast<const IMAGE_SECTION_HEADER*>(
-            libcc + libcc_dos_header->e_lfanew + sizeof(libcc_nt_header->Signature) + sizeof(libcc_nt_header->FileHeader) + libcc_nt_header->FileHeader.SizeOfOptionalHeader
-        );
-
-        const IMAGE_SECTION_HEADER* rdata_section = nullptr;
-        for (WORD i = 0; i < section_num; ++i) {
-            if (*reinterpret_cast<const uint64_t*>(libcc_section_headers[i].Name) == 0x61746164722e) {   // b'\x00\x00atadr.'
-                rdata_section = libcc_section_headers + i;
-                break;
-            }
-        }
-        if (rdata_section == nullptr) {
-            _tprintf_s(TEXT(".rdata section is not found. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        const IMAGE_SECTION_HEADER* text_section = nullptr;
-        for (WORD i = 0; i < section_num; ++i) {
-            if (*reinterpret_cast<const uint64_t*>(libcc_section_headers[i].Name) == 0x747865742e) {   // b'\x00\x00\x00txet.'
-                text_section = libcc_section_headers + i;
-                break;
-            }
-        }
-        if (text_section == nullptr) {
-            _tprintf_s(TEXT(".text section is not found. @[FindPatchOffset]\r\n"));
-            UnmapViewOfFile(libcc);
-            CloseHandle(h_libcc_map);
-            CloseHandle(h_libcc);
-            return FALSE;
-        }
-
-        // search offset[0] 
-        {
-            const uint8_t keyword[] = "D75125B70767B94145B47C1CB3C0755E";
-            const uint8_t* start = libcc + rdata_section->PointerToRawData;
-            DWORD section_size = rdata_section->SizeOfRawData;
-            for (DWORD i = 0; i < section_size; ++i) {
-                if (start[i] == keyword[0]) {
-                    bool found = true;
-                    for (DWORD j = 1; j < sizeof(keyword) - 1; ++j)
-                        if (start[i + j] != keyword[j]) {
-                            found = false;
-                            break;
-                        }
-                    if (found) {
-                        Offset[0] = rdata_section->PointerToRawData + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // search offset[2] 
-        {
-            const uint8_t keyword[] = "E1CED09B9C2186BF71A70C0FE2F1E0AE";
-            const uint8_t* start = libcc + rdata_section->PointerToRawData;
-            DWORD section_size = rdata_section->SizeOfRawData;
-            for (DWORD i = 0; i < section_size; ++i) {
-                if (start[i] == keyword[0]) {
-                    bool found = true;
-                    for (DWORD j = 1; j < sizeof(keyword) - 1; ++j)
-                        if (start[i + j] != keyword[j]) {
-                            found = false;
-                            break;
-                        }
-                    if (found) {
-                        Offset[2] = rdata_section->PointerToRawData + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // search offset[4] 
-        {
-            const uint8_t keyword[] = "92933";
-            const uint8_t* start = libcc + rdata_section->PointerToRawData;
-            DWORD section_size = rdata_section->SizeOfRawData;
-            for (DWORD i = 0; i < section_size; ++i) {
-                if (start[i] == keyword[0]) {
-                    bool found = true;
-                    for (DWORD j = 1; j < sizeof(keyword) - 1; ++j)
-                        if (start[i + j] != keyword[j]) {
-                            found = false;
-                            break;
-                        }
-                    if (found) {
-                        Offset[4] = rdata_section->PointerToRawData + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // search offset[1]
-        {
-            const uint8_t keyword[] = { 0xfe, 0xea, 0xbc, 0x01 };
-            const uint8_t* start = libcc + text_section->PointerToRawData;
-            DWORD section_size = text_section->SizeOfRawData;
-            for (DWORD i = 0; i < section_size; ++i) {
-                if (start[i] == keyword[0]) {
-                    bool found = true;
-                    for (DWORD j = 1; j < sizeof(keyword); ++j)
-                        if (start[i + j] != keyword[j]) {
-                            found = false;
-                            break;
-                        }
-                    if (found) {
-                        Offset[1] = text_section->PointerToRawData + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // search offset[3]
-        {
-            const uint8_t keyword[] = { 0x59, 0x08, 0x01, 0x00 };
-            const uint8_t* start = libcc + text_section->PointerToRawData;
-            DWORD section_size = text_section->SizeOfRawData;
-            for (DWORD i = 0; i < section_size; ++i) {
-                if (start[i] == keyword[0]) {
-                    bool found = true;
-                    for (DWORD j = 1; j < sizeof(keyword); ++j)
-                        if (start[i + j] != keyword[j]) {
-                            found = false;
-                            break;
-                        }
-                    if (found) {
-                        Offset[3] = text_section->PointerToRawData + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        UnmapViewOfFile(libcc);
-        CloseHandle(h_libcc_map);
-        CloseHandle(h_libcc);
-
-        if (Offset[0] == 0 || Offset[1] == 0 || Offset[2] == 0 || Offset[3] == 0 || Offset[4] == 0) {
-            _tprintf_s(TEXT("Failed to find all patch offset. Is libcc.dll from official? Or you've patched?\r\n"));
-            return FALSE;
-        } else {
-            return TRUE;
-        }
-    }
-
-    BOOL Do(LPCTSTR libcc_dll_path, LPCTSTR prepared_key_file) {
-//         uint8_t expected_hash[SHA256_DIGEST_LENGTH] = {
-//             0x60, 0x7e, 0x0a, 0x84, 0xc7, 0x59, 0x66, 0xb0,
-//             0x0f, 0x3d, 0x12, 0xfa, 0x83, 0x3e, 0x91, 0xd1,
-//             0x59, 0xe4, 0xf5, 0x1a, 0xc5, 0x1b, 0x6b, 0xa6,
-//             0x6f, 0x98, 0xd0, 0xc3, 0xcb, 0xef, 0xdc, 0xe0
-//         };
-// 
-//         if (!Check_libcc_Hash(libcc_dll_path, expected_hash))
-//             return FALSE;
-
-        DWORD Patch_Offset[5];
-        if (!FindPatchOffset(libcc_dll_path, Patch_Offset)) 
-            return FALSE;
+    BOOL FindTargetFile() {
+        DWORD dwLastError = ERROR_SUCCESS;
+        std::Tstring&& TargetFileName = InstallationPath + TargetName;
         
-            
-
-        if (!BackupFile(libcc_dll_path))
-            return FALSE;
-
-        RSA* PrivateKey = nullptr;
-        if (prepared_key_file != nullptr) {
-            PrivateKey = ReadRSAPrivateKeyFromFile(prepared_key_file);
-            if (PrivateKey == nullptr)
+        hTarget = CreateFile(TargetFileName.c_str(),
+                             GENERIC_READ | GENERIC_WRITE,
+                             FILE_SHARE_READ,
+                             NULL,
+                             OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL,
+                             NULL);
+        if (hTarget == INVALID_HANDLE_VALUE) {
+            dwLastError = GetLastError();
+            if (dwLastError == ERROR_FILE_NOT_FOUND) {
                 return FALSE;
-
-            if (!CheckRSAKeyIsAppropriate(PrivateKey)) {
-                _tprintf_s(TEXT("The key is not appropriate to use. @[patcher::Solution1::Do -> CheckRSAKeyIsAppropriate]\r\n"));
-                RSA_free(PrivateKey);
-                return FALSE;
-            }
-
-        } else {
-            PrivateKey = GenerateAppropriateRSAKey();
-            if (PrivateKey == nullptr)
-                return FALSE;
-
-            if (!WriteRSAPrivateKeyToFile(TEXT("RegPrivateKey.pem"), PrivateKey)) {
-                RSA_free(PrivateKey);
+            } else {
+                _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+                _tprintf_s(TEXT("Unexpected Error @ CreateFile. CODE: 0x%08X\n"), dwLastError);
                 return FALSE;
             }
         }
+        
+        return TRUE;
+    }
 
-        char* pem_pubkey = GetPEMText(PrivateKey);
-        if (pem_pubkey == nullptr)
+    BOOL FindOffset() {
+        BOOL bSuccess = FALSE;
+        DWORD dwLastError = ERROR_SUCCESS;
+        IMAGE_SECTION_HEADER* textSection = NULL;
+        IMAGE_SECTION_HEADER* rdataSection = NULL;
+
+        hTargetMap = CreateFileMapping(hTarget,
+                                       NULL,
+                                       PAGE_READWRITE,
+                                       0,
+                                       0,
+                                       NULL);
+        if (hTargetMap == NULL) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ CreateFileMapping. CODE: 0x%08X\n"), dwLastError);
+            goto ON_FindOffset_ERROR;
+        }
+
+        lpFileContent = MapViewOfFile(hTargetMap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+        if (lpFileContent == NULL) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ MapViewOfFile. CODE: 0x%08X\n"), dwLastError);
+            goto ON_FindOffset_ERROR;
+        }
+
+        textSection = ImageSectionHeader(lpFileContent, ".text");
+        if (textSection == NULL) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find .text section.\n"));
+            goto ON_FindOffset_ERROR;
+        }
+
+        rdataSection = ImageSectionHeader(lpFileContent, ".rdata");
+        if (textSection == NULL) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find .rdata section.\n"));
+            goto ON_FindOffset_ERROR;
+        }
+
+        // -------------------------
+        // try to search keyword0
+        // -------------------------
+        for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
+            if (memcmp((uint8_t*)lpFileContent + rdataSection->PointerToRawData + i, Keyword0, KeywordSize0) == 0) {
+                KeywordOffset[0] = rdataSection->PointerToRawData + i;
+                break;
+            }
+        }
+
+        if (KeywordOffset[0] == -1) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find Keyword0.\n"));
+            goto ON_FindOffset_ERROR;
+        } else {
+            _tprintf_s(TEXT("Keyword0 has been found: offset = +0x%08X.\n"), KeywordOffset[0]);
+        }
+
+        // -------------------------
+        // try to search keyword1
+        // -------------------------
+        for (DWORD i = 0; i < textSection->SizeOfRawData; ++i) {
+            if (memcmp((uint8_t*)lpFileContent + textSection->PointerToRawData + i, Keyword1, KeywordSize1) == 0) {
+                KeywordOffset[1] = textSection->PointerToRawData + i;
+                break;
+            }
+        }
+
+        if (KeywordOffset[1] == -1) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find Keyword1.\n"));
+            goto ON_FindOffset_ERROR;
+        } else {
+            _tprintf_s(TEXT("Keyword1 has been found: offset = +0x%08X.\n"), KeywordOffset[1]);
+        }
+
+        // -------------------------
+        // try to search keyword2
+        // -------------------------
+        for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
+            if (memcmp((uint8_t*)lpFileContent + rdataSection->PointerToRawData + i, Keyword2, KeywordSize2) == 0) {
+                KeywordOffset[2] = rdataSection->PointerToRawData + i;
+                break;
+            }
+        }
+
+        if (KeywordOffset[2] == -1) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find Keyword2.\n"));
+            goto ON_FindOffset_ERROR;
+        } else {
+            _tprintf_s(TEXT("Keyword2 has been found: offset = +0x%08X.\n"), KeywordOffset[2]);
+        }
+
+        // -------------------------
+        // try to search keyword3
+        // -------------------------
+        for (DWORD i = 0; i < textSection->SizeOfRawData; ++i) {
+            if (memcmp((uint8_t*)lpFileContent + textSection->PointerToRawData + i, Keyword3, KeywordSize3) == 0) {
+                KeywordOffset[3] = textSection->PointerToRawData + i;
+                break;
+            }
+        }
+
+        if (KeywordOffset[3] == -1) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find Keyword3.\n"));
+            goto ON_FindOffset_ERROR;
+        } else {
+            _tprintf_s(TEXT("Keyword3 has been found: offset = +0x%08X.\n"), KeywordOffset[3]);
+        }
+
+        // -------------------------
+        // try to search keyword4
+        // -------------------------
+        for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
+            if (memcmp((uint8_t*)lpFileContent + rdataSection->PointerToRawData + i, Keyword4, KeywordSize4) == 0) {
+                KeywordOffset[4] = rdataSection->PointerToRawData + i;
+                break;
+            }
+        }
+
+        if (KeywordOffset[4] == -1) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Cannot find Keyword4.\n"));
+            goto ON_FindOffset_ERROR;
+        } else {
+            _tprintf_s(TEXT("Keyword4 has been found: offset = +0x%08X.\n"), KeywordOffset[4]);
+        }
+        
+        bSuccess = TRUE;
+
+    ON_FindOffset_ERROR:
+        return bSuccess;
+    }
+
+    BOOL BackupFile() {
+        BOOL bSuccess = FALSE;
+        DWORD dwLastError = ERROR_SUCCESS;
+        std::Tstring&& TargetFileName = InstallationPath + TargetName;
+        std::Tstring&& BackupFileName = InstallationPath + TargetName + TEXT(".backup");
+
+        if (!CopyFile(TargetFileName.c_str(), BackupFileName.c_str(), TRUE)) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ CopyFile. CODE: 0x%08X\n"), dwLastError);
+            goto ON_BackupFile_ERROR;
+        }
+
+        bSuccess = TRUE;
+    ON_BackupFile_ERROR:
+        return bSuccess;
+    }
+
+    BOOL Do(RSACipher* cipher) {
+        std::string RSAPublicKeyPEM;
+        std::string encrypted_pem_pubkey;
+
+        RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+        if (RSAPublicKeyPEM.empty()) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: cipher->ExportKeyString failed.\n"));
             return FALSE;
+        }
 
-        std::string encrypted_pem_pubkey = EncryptPublicKey(pem_pubkey, strlen(pem_pubkey));
+        [](std::string& str, const std::string& OldSub, const std::string& NewSub) {
+            std::string::size_type pos = 0;
+            std::string::size_type srclen = OldSub.size();
+            std::string::size_type dstlen = NewSub.size();
 
-        delete[] pem_pubkey;    // we do not need it anymore
-        RSA_free(PrivateKey);   // we do not need it anymore
+            while ((pos = str.find(OldSub, pos)) != std::string::npos) {
+                str.replace(pos, srclen, NewSub);
+                pos += dstlen;
+            }
+        } (RSAPublicKeyPEM, "\n", "\r\n");  // replace '\n' to '\r\n'
+
+        encrypted_pem_pubkey = EncryptPublicKey(RSAPublicKeyPEM.c_str(), RSAPublicKeyPEM.length());
 
         // split encrypted_pem_pubkey to 5 part:    |160 chars|8 chars|742 chars|5 chars|5 chars|
         //                                                         |                |
@@ -330,107 +372,46 @@ namespace patcher::Solution1 {
         std::string encrypted_pem_pubkey2(encrypted_pem_pubkey.begin() + 160 + 8, encrypted_pem_pubkey.begin() + 160 + 8 + 742);
         std::string encrypted_pem_pubkey3(encrypted_pem_pubkey.begin() + 160 + 8 + 742, encrypted_pem_pubkey.begin() + 160 + 8 + 742 + 5);
         std::string encrypted_pem_pubkey4(encrypted_pem_pubkey.begin() + 160 + 8 + 742 + 5, encrypted_pem_pubkey.end());
-
         uint32_t imm1 = std::stoul(encrypted_pem_pubkey1.c_str());
         uint32_t imm3 = std::stoul(encrypted_pem_pubkey3.c_str());
 
-        HANDLE hFile = CreateFile(libcc_dll_path, GENERIC_WRITE, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (hFile == INVALID_HANDLE_VALUE) {
-            _tprintf_s(TEXT("Failed to open libcc.dll. CODE: 0x%08x @[patcher::Solution1::Do -> CreateFile]\r\n"), GetLastError());
-            return FALSE;
-        }
-        
-        // Start from win8, lpNumberOfBytesWritten parameter in WriteFile can be null if lpOverlapped is null.
-        // But win7 is not. lpNumberOfBytesWritten cannot be null if lpOverlapped is null. 
-        // However MSDN does not mention that.
-        DWORD WrittenBytes;
+        _tprintf_s(TEXT("\n"));
+        _tprintf_s(TEXT("@Offset +0x%08X, write string:\n"), KeywordOffset[0]);
+        printf_s("\"%s\"\n\n", encrypted_pem_pubkey0.c_str());
+        memcpy((uint8_t*)lpFileContent + KeywordOffset[0], encrypted_pem_pubkey0.c_str(), 160);
 
-        // start patch 0
-        _tprintf_s(TEXT("\r\nStart to do patch 0......\r\n"));
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[0], nullptr, FILE_BEGIN)) {
-            _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-        
-        _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[0], encrypted_pem_pubkey0.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey0.c_str(), encrypted_pem_pubkey0.length(), &WrittenBytes, nullptr)) {
-            _tprintf_s(TEXT("Failed to write patch 0. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
+        _tprintf_s(TEXT("@Offset +0x%08X, write uint32_t:\n"), KeywordOffset[1]);
+        printf_s("0x%08X\n\n", imm1);
+        memcpy((uint8_t*)lpFileContent + KeywordOffset[1], &imm1, sizeof(uint32_t));
 
-        _tprintf_s(TEXT("patch 0 done.....\r\n"));
+        _tprintf_s(TEXT("@Offset +0x%08X, write string:\n"), KeywordOffset[2]);
+        printf_s("\"%s\"\n\n", encrypted_pem_pubkey2.c_str());
+        memcpy((uint8_t*)lpFileContent + KeywordOffset[2], encrypted_pem_pubkey2.c_str(), 742);
 
-        // start patch 1
-        _tprintf_s(TEXT("\r\nStart to do patch 1.....\r\n"));
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[1], nullptr, FILE_BEGIN)) {
-            _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
+        _tprintf_s(TEXT("@Offset +0x%08X, write uint32_t:\n"), KeywordOffset[3]);
+        printf_s("0x%08X\n\n", imm3);
+        memcpy((uint8_t*)lpFileContent + KeywordOffset[3], &imm3, sizeof(uint32_t));
 
-        _tprintf_s(TEXT("At offset +0x%08x, write immediate value %d (type: uint32_t)\r\n"), Patch_Offset[1], imm1);
-        if (FALSE == WriteFile(hFile, &imm1, sizeof(imm1), &WrittenBytes, nullptr)) {
-            _tprintf_s(TEXT("Failed to write patch 1. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("patch 1 done.....\r\n"));
-
-        // start patch 2
-        _tprintf_s(TEXT("\r\nStart to do patch 2.....\r\n"));
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[2], nullptr, FILE_BEGIN)) {
-            _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[2], encrypted_pem_pubkey2.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey2.c_str(), encrypted_pem_pubkey2.length(), &WrittenBytes, nullptr)) {
-            _tprintf_s(TEXT("Failed to write patch 2. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("patch 2 done.....\r\n"));
-
-        // start patch 3
-        _tprintf_s(TEXT("\r\nStart to do patch 3.....\r\n"));
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[3], nullptr, FILE_BEGIN)) {
-            _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("At offset +0x%08x, write immediate value %d (type: uint32_t)\r\n"), Patch_Offset[3], imm3);
-        if (FALSE == WriteFile(hFile, &imm3, sizeof(imm3), &WrittenBytes, nullptr)) {
-            _tprintf_s(TEXT("Failed to write patch 3. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("patch 3 done.....\r\n"));
-
-        // start patch 4
-        _tprintf_s(TEXT("\r\nStart to do patch 4.....\r\n"));
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, Patch_Offset[4], nullptr, FILE_BEGIN)) {
-            _tprintf_s(TEXT("Failed to set file pointer. CODE: 0x%08x @[patcher::Solution1::Do -> SetFilePointer]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("At offset +0x%08x, write:\r\n\"%hs\"\r\n"), Patch_Offset[4], encrypted_pem_pubkey4.c_str());
-        if (FALSE == WriteFile(hFile, encrypted_pem_pubkey4.c_str(), encrypted_pem_pubkey4.length(), &WrittenBytes, nullptr)) {
-            _tprintf_s(TEXT("Failed to write patch 4. CODE: 0x%08x @[patcher::Solution1::Do -> WriteFile]\r\n"), GetLastError());
-            CloseHandle(hFile);
-            return FALSE;
-        }
-
-        _tprintf_s(TEXT("patch 4 done.....\r\n\r\n"));
+        _tprintf_s(TEXT("@Offset +0x%08X, write string:\n"), KeywordOffset[4]);
+        printf_s("\"%s\"\n\n", encrypted_pem_pubkey4.c_str());
+        memcpy((uint8_t*)lpFileContent + KeywordOffset[4], encrypted_pem_pubkey4.c_str(), 5);
 
         return TRUE;
+    }
+
+    VOID Finalize() {
+        if (lpFileContent) {
+            UnmapViewOfFile(lpFileContent);
+            lpFileContent = NULL;
+        }
+        if (hTargetMap) {
+            CloseHandle(hTargetMap);
+            hTargetMap = NULL;
+        }
+        if (hTarget) {
+            CloseHandle(hTarget);
+            hTarget = INVALID_HANDLE_VALUE;
+        }
     }
 
 }

@@ -71,23 +71,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)openssl-lib\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)openssl-lib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)openssl-lib\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)openssl-lib\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\openssl-1.1.0f-vs2015\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)openssl-lib\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)openssl-lib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\openssl-1.1.0f-vs2015\include64;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\openssl-1.1.0f-vs2015\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)openssl-lib\include64;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)openssl-lib\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -162,7 +162,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="common.cpp" />
     <ClCompile Include="EncryptPublicKey.cpp" />
     <ClCompile Include="NavicatCrypto\aes.c" />
     <ClCompile Include="NavicatCrypto\aes_constant.c" />
@@ -178,6 +177,7 @@
     <ClInclude Include="NavicatCrypto\blowfish.h" />
     <ClInclude Include="NavicatCrypto\NavicatCrypto.hpp" />
     <ClInclude Include="NavicatCrypto\sha1.h" />
+    <ClInclude Include="RSACipher.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
