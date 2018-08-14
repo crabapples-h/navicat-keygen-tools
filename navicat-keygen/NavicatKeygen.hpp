@@ -29,7 +29,8 @@ public:
         SQLServer,
         SQLite,
         MariaDB,
-        MongoDB
+        MongoDB,
+        ReportViewer
     };
 private:
     std::random_device rand_dev;
@@ -117,6 +118,8 @@ private:
             case Product::MongoDB:
                 data[7] = 0x80;
                 break;
+            case Product::ReportViewer:
+                data[7] = 0xb;
             default:
                 break;
         }
