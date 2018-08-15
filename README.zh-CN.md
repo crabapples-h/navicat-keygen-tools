@@ -137,11 +137,11 @@
 
     这是一个被分为了4个部分的字符串，其中每个部分都是4个字符长。
 
-    __序列号__ 是通过10个字节的数据来生成的。为了表达方便，我用 __data[10]__ 来表示这10个字节。
+    __序列号__ 是通过10个字节的数据来生成的。为了表达方便，我用 __uint8_t data[10]__ 来表示这10个字节。
 
     1. __data[0]__ 和 __data[1]__ 必须分别为 `0x68` 和 `0x2A`。
 
-       _`Navicat产品类型变化时，这两个值可能会变。目前暂未确认。`_  
+       这两个字节时Navicat的标志数。
 
     2. __data[2]__、__data[3]__ 和 __data[4]__ 可以是任意字节，你想设成什么都行。
 
@@ -163,16 +163,24 @@
 
        根据 __Navicat 12 for Mac x64__ 版本残留的符号信息可知这两个字节为 __Product Signature__。
 
-    4. __data[7]__ 指示这是 __commercial license__ 还是 __non-commercial license__。
+    4. __data[7]__ 是Navicat产品ID。（感谢 @dragonflylee 和 @Deltafox79）这是 __commercial license__ 还是 __non-commercial license__。
 
-       对于 __Navicat 12__: `0x65`是 __commercial license__，`0x66`是 __non-commercial license__。  
-       对于 __Navicat 11__: `0x15`是 __commercial license__，`0x16`是 __non-commercial license__。  
+       |Product Name         |Enterprise|Standard|Educational|Essentials|
+       |---------------------|:--------:|:------:|:---------:|:--------:|
+       |Navicat Report Viewer|0x0B      |        |           |          |
+       |Navicat Data Modeler |          |0x47    |0x4A       |          |
+       |Navicat Premium      |0x65      |        |0x66       |0x67      |
+       |Navicat MySQL        |0x68      |0x69    |0x6A       |0x6B      |
+       |Navicat PostgreSQL   |0x6C      |0x6D    |0x6E       |0x6F      |
+       |Navicat Oracle       |0x70      |0x71    |0x72       |0x73      |
+       |Navicat SQL Server   |0x74      |0x75    |0x76       |0x77      |
+       |Navicat SQLite       |0x78      |0x79    |0x7A       |0x7B      |
+       |Navicat MariaDB      |0x7C      |0x7D    |0x7E       |0x7F      |
+       |Navicat MongoDB      |0x80      |0x81    |0x82       |          |
 
-       _`Navicat产品类型变化时，这两个值可能会变。目前暂未确认。`_  
+    5. __data[8]__ 的高4位代表 __版本号__。低4位未知，但可以用来延长激活期限，可取的值有`0000`和`0001`。
 
-       根据 __Navicat 12 for Mac x64__ 版本残留的符号信息可知：__commercial license__ 是 __Enterprise License__， __non-commercial license__ 是 __Educational License__。
-
-    5. __data[8]__ 的高4位代表 __版本号__。低四位未知，但可以用来延长激活期限，可取的值有`0000`和`0001`。
+       例如：
 
        对于 __Navicat 12__: 高4位必须是`1100`，为`12`的二进制形式。  
        对于 __Navicat 11__: 高4位必须是`1011`，为`11`的二进制形式。  
@@ -215,7 +223,7 @@
 
        你就会得到一个16字节的字符串。
 
-       如果 __data[10]__ 以`0x68`和`0x2A`开始的话，编码之后应该以`"N"`、`"A"`、`"V"`打头。
+       如果 __uint8_t data[10]__ 以`0x68`和`0x2A`开始的话，编码之后应该以`"N"`、`"A"`、`"V"`打头。
 
     4. 将16字节的字符串分成4个4字节的小块，然后用`"-"`连接就可以得到 __序列号__。
 
@@ -242,50 +250,143 @@
      5. 在Navicat软件中填入 __激活码__ 即可完成离线激活。
 
 ## 4. 如何使用这个Keygen
-  1. 用Release模式编译好patcher以及keygen，或者从本repo的release里下载最新的release。
+  1. 下载最新的release。
 
   2. 替换掉`navicat.exe`或`libcc.dll`里的 __Navicat激活公钥__。  
+
+     ```bash
+     navicat-patcher.exe <Navicat 安装路径> <RSA私钥文件>
+     ```
+
+     RSA私钥文件可以为RegPrivateKey.pem
+
      例如：  
 
-     * 对于 Navicat Premium 版本 < 12.0.25的：
-       ```bash
-       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12"
-       D:\Program Files\PremiumSoft\Navicat Premium 12\navicat.exe has been backed up.
-       Public key has been replaced.
-       Success!
-       ```
+     ```bash
+     C:\Users\DoubleSine\Github\navicat-keygen\x64\Release>navicat-patcher.exe "C:\Program Files\PremiumSoft\Navicat Premium 12" RegPrivateKey.pem
+     Target has been found: navicat.exe
+     Solution0 has been done successfully.
 
-     * 对于 Navicat Premium 版本 >= 12.0.25的：
-       ```bash
-       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12"
-       D:\Program Files\PremiumSoft\Navicat Premium 12\libcc.dll has been backed up.
-       Public key has been replaced.
-       Success!
-       ```
-       你可能会需要等个几秒钟或者更久，因为patcher正在搜寻合适的RSA密钥。最后你会在console的当前目录得到`RegPrivateKey.pem`文件。
+     Keyword0 has been found: offset = +0x02048200.
+     Keyword1 has been found: offset = +0x006C4E29.
+     Keyword2 has been found: offset = +0x02047F10.
+     Keyword3 has been found: offset = +0x006C4E0F.
+     Keyword4 has been found: offset = +0x02047F04.
 
-       如果你不想搜寻，那么使用最新release里预留的`RegPrivateKey.pem`，然后：
-       ```bash
-       E:\GitHub\navicat-keygen\x64\Release>navicat-patcher.exe "D:\Program Files\PremiumSoft\Navicat Premium 12" RegPrivateKey.pem
-       D:\Program Files\PremiumSoft\Navicat Premium 12\libcc.dll has been backed up.
-       Public key has been replaced.
-       Success!
-       ```
+     @Offset +0x02048200, write string:
+     "D75125B70767B94145B47C1CB3C0755E7CCB8825C5DCE0C58ACF944E082801409A02472FAFFD1CD77864BB821AE36766FEEDE6A24F12662954168BFA314BD95032B9D82445355ED7784ADAC1C58775D2"
+
+     @Offset +0x006C4E29, write uint32_t:
+     0x0520738A
+
+     @Offset +0x02047F10, write string:
+     "20EEA059669FE4E949F414710A6C11CF68B5318B445D2D0CA85471E9DC382F271E974315F2F3645C2613BF60669584CF0A7531B1E5D2D281097E32A6B17286E8A9BDD06A17A036BC8949C9069CA3A166C251D325A7EAF81DB272CF4E277CC487D6BACB83C1059BBC0D45F49CBB6EA2C0E8033039CA575A939C8FF705FFA1FCA9DD53FD10447EE8D2F48128298E5DAB483F7A1500C455AFE33BB7FB280C39686CC45C7EC8C024EBF1089040D6636FF02E0E2A61092168A5CB105DBF3F5C6EB5C10D7392A46254B6E34DD4365F778ED199A52C6AB931416453CB8A677C90A6674BA5D546B25CDEC9C2E0B067729A6067FB1106B3BF7BBD56B888B5321484779570040B2095CD410D3B33F77BCFC9C24CA5A60003E342F110D35AA4714BFC8B3D9840BB3C8C286C5E353D5DEC4351A27E6E403AED2A21BBD0EA4194FB65B37F301A2E86BF9E9F8BBBFAA2400410ABC7833B3CCAAC66F27F873990E2D97BB36A70A5C9E4E3647C3AD0FAA716820A0BDC15CA8D7392"
+
+     @Offset +0x006C4E0F, write uint32_t:
+     0x00004708
+
+     @Offset +0x02047F04, write string:
+     "64308"
+
+     Solution1 has been done successfully.
+
+     ```
 
   3. 接下来，还是在console中：
 
      ```bash
-     E:\GitHub\navicat-keygen\x64\Release>navicat-keygen.exe RegPrivateKey.pem
-
+     navicat-keygen.exe RegPrivateKey.pem
      ```
 
-     你会得到一个 __序列号__，同时keygen会要求你输入用户名和组织名。  
-     直接填写，之后你会被要求填写你得到的 __请求码__。注意 __不要关闭console__.
+     你会被要求选择Navicat产品类别、语言以及输入主版本号。之后会随机生成一个 __序列号__。
+
+     例如：
+
+     ```bash
+     C:\Users\DoubleSine\Github\navicat-keygen\x64\Release>navicat-keygen.exe RegPrivateKey.pem
+     Select Navicat product:
+     1. DataModeler
+     2. Premium
+     3. MySQL
+     4. PostgreSQL
+     5. Oracle
+     6. SQLServer
+     7. SQLite
+     8. MariaDB
+     9. MongoDB
+     10. ReportViewer
+
+     (input index)> 1
+
+     Select product language:
+     1. English
+     2. Simplified Chinese
+     3. Traditional Chinese
+     4. Japanese
+     5. Polish
+     6. Spanish
+     7. French
+     8. German
+     9. Korean
+     10. Russian
+     11. Portuguese
+
+     (input index)> 0
+
+     (input major version number)> 12
+
+     Serial number:
+     NAVI-2ORL-MJQC-7WFO
+
+     Your name: 
+     ```
+
+     你可以使用这个序列号暂时激活Navicat。
+
+     接下来你会被要求输入`用户名`和`组织名`；请随便填写，但不要太长。
+     
+     例如：
+
+     ```bash
+     Your name: DoubleLabyrinth
+     Your organization: DoubleLabyrinth
+     Input request code (in Base64), input empty line to end:
+     ```
+     
+     之后你会被要求填入 __请求码__。注意 __不要关闭命令行__.
 
   4. 断开网络并打开 Navicat Premium。找到`注册`窗口，并填入keygen给你的 __序列号__。然后点击`激活`按钮。
 
   5. 一般来说在线激活肯定会失败，这时候Navicat会询问你是否`手动激活`，直接选吧。
 
   6. 在`手动激活`窗口你会得到一个请求码，复制它并把它粘贴到keygen里。最后别忘了连按至少两下回车结束输入。
+
+     例如：
+
+     ```bash
+     Your name: DoubleLabyrinth
+     Your organization: DoubleLabyrinth
+     Input request code (in Base64), input empty line to end:
+     J517hWX/29aQMITp5UfS/FarX6q8pFKmW1Cl7Nt2UpvmVxhZDn5YBdPw/htDsBbXacNpLtorxfZM
+     Jxv/SZMqHsr7/JqexaaAEfzn5mo6zpatcSRArFoQh2h9IcnjRqziZ8yihkMUesKgsWXvVXMEYk7u
+     D1rc/GhzTf6/2kn0gTKRAlJGsxt+e1p6SOhPuMyzt3AyNvJ2s0o607Nub7vC37FOJF69jN1nOvej
+     uy3bmr2HSPFsh10WqUUYi6F1lzzYIq6nDjQ5CeKrCT2jPfrhoFtRbwJyYDxQOxU/adrm1bg8VjrK
+     XNGeKS67R1nrbBM03IKzPP3pxEGFut4gZdskRw==
+
+     Request Info:
+     {"K":"NAVI2ORLMJQC7WFO", "DI":"Y2eJk9vrvfGudPG7Mbdn", "P":"WIN 8"}
+
+     Response Info:
+     {"K":"NAVI2ORLMJQC7WFO","DI":"Y2eJk9vrvfGudPG7Mbdn","N":"DoubleLabyrinth","O":"DoubleLabyrinth","T":1534251096}
+
+     License:
+     iFvqOkwsVq/Wutw/hELC5dyweDahl2v8R3bMWcNXS/V49CjpaDEJIHtRLddu/ldg
+     WVGdwdh3aHVJ5k8I6RkUicDvZJH2vLn3o5O9Q/A5ThED0AoYnwu0DLa1gEUlRO68
+     4+uXwo1nZ+xtjLOSxrVh+fLkcvKtd5RDgHS5957qUwjoYBiuePGomtt9mF4NtfaF
+     E7pnfP/OGp8xtWdUfGZ1fESWttKcVXcmOpyF4uTWtluUhFHRk+ZueST/ETyaSx33
+     Kv/zSLBbK8KaVqS2sh5WBs8xVaYxDV08EC8uCCp1euTFOPG5nlrcf7iyILsh6I67
+     xfGRliXvM67jvsxqD200fg==
+
+     ```
 
   7. 如果不出意外，你会得到一个看似用Base64编码的 __激活码__。直接复制它，并把它粘贴到Navicat的`手动激活`窗口，最后点`激活`按钮。如果没什么意外的话应该能成功激活。
