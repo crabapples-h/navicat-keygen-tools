@@ -25,6 +25,7 @@ namespace patcher {
         BOOL CheckFile();
         BOOL BackupFile();
         BOOL Do(RSACipher* cipher);
+        BOOL GetVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer);
         VOID Finalize();
     }
 

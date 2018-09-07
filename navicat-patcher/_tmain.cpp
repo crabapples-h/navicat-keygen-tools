@@ -78,6 +78,8 @@ int _tmain(int argc, TCHAR* argv[]) {
     }
 
     RSACipher* cipher = NULL;
+    DWORD dwMajorVer = 0;
+    DWORD dwMinorVer = 0;
 
     cipher = RSACipher::Create();
     if (cipher == NULL) {
@@ -128,6 +130,9 @@ int _tmain(int argc, TCHAR* argv[]) {
         goto ON_tmain_ERROR;
     }
 
+    if (!patcher::Solution0::GetVersion(&dwMajorVer, &dwMinorVer))
+        goto ON_tmain_ERROR;
+
     if (!patcher::Solution0::CheckFile()) 
         goto ON_tmain_ERROR;
 
@@ -140,11 +145,18 @@ int _tmain(int argc, TCHAR* argv[]) {
     _tprintf_s(TEXT("Solution0 has been done successfully.\n"));
     _tprintf_s(TEXT("\n"));
 
+    // for ver <= 12.0.24
+    if (dwMajorVer == 0x000c0000 && dwMinorVer < 0x00180000)
+        goto ON_tmain_ERROR;    // you don't need Solution1 patch.
+
     // ------------------
     // begin Solution1
     // ------------------
-    if (!patcher::Solution1::FindTargetFile())
+    if (!patcher::Solution1::FindTargetFile()) {
+        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+        _tprintf_s(TEXT("ERROR: Cannot find libcc.dll. Are you sure the path you specified is correct?\n"));
         goto ON_tmain_ERROR;
+    }    
 
     if (!patcher::Solution1::FindOffset())
         goto ON_tmain_ERROR;

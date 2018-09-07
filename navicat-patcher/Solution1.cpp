@@ -87,7 +87,7 @@ namespace patcher::Solution1 {
 
         InstallationPath = Path;
         if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
-            InstallationPath.push_back(TEXT('\\'));
+            InstallationPath.push_back(TEXT('/'));  // for Linux compatible
 
         bSuccess = TRUE;
 

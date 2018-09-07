@@ -19,9 +19,9 @@ namespace patcher::Solution0 {
     static const DWORD KeywordLength = sizeof(Keyword) - 1;
 
     static LPCTSTR PossibleName[3] = {
-        TEXT("navicat.exe"),
-        TEXT("modeler.exe"),
-        TEXT("rviewer.exe")
+        TEXT("Navicat.exe"),    // for Linux compatible, main program name is "Navicat.exe" in Linux, case sensitive
+        TEXT("Modeler.exe"),    // for Linux compatible
+        TEXT("Rviewer.exe")     // for Linux compatible
     };
 
     static LPCTSTR TargetName = NULL;
@@ -49,7 +49,7 @@ namespace patcher::Solution0 {
 
         InstallationPath = Path;
         if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
-            InstallationPath.push_back(TEXT('\\'));
+            InstallationPath.push_back(TEXT('/'));  // for Linux compatible
 
         bSuccess = TRUE;
 
@@ -222,6 +222,57 @@ namespace patcher::Solution0 {
 
     ON_Do_ERROR:
         EndUpdateResource(hUpdater, !bSuccess);
+        return bSuccess;
+    }
+
+    BOOL GetVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer) {
+        BOOL bSuccess = FALSE;
+        DWORD dwLastError = ERROR_SUCCESS;
+        std::Tstring&& TargetFileName = InstallationPath + TargetName;
+        DWORD dwSize = 0;
+        PVOID lpData = NULL;
+        VS_FIXEDFILEINFO* lpVersionInfo = NULL;
+        UINT VersionInfoSize = 0;
+
+        dwSize = GetFileVersionInfoSize(TargetFileName.c_str(), 
+                                        &dwSize);   // MSDN doesn't say it can be NULL.
+                                                    // so I use dwSize to receive this deprecated value
+        if (dwSize == 0) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ GetFileVersionInfoSize. CODE: 0x%08X\n"), dwLastError);
+            goto ON_GetVersion_ERROR;
+        }
+
+        lpData = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+        if (lpData == NULL) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ HeapAlloc. CODE: 0x%08X\n"), dwLastError);
+            goto ON_GetVersion_ERROR;
+        }
+
+        if (!GetFileVersionInfo(TargetFileName.c_str(), NULL, dwSize, lpData)) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ GetFileVersionInfo. CODE: 0x%08X\n"), dwLastError);
+            goto ON_GetVersion_ERROR;
+        }
+
+        if (!VerQueryValue(lpData, TEXT("\\"), (LPVOID*)&lpVersionInfo, &VersionInfoSize)) {
+            dwLastError = GetLastError();
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("Failed @ VerQueryValue. CODE: 0x%08X\n"), dwLastError);
+            goto ON_GetVersion_ERROR;
+        }
+
+        *lpMajorVer = lpVersionInfo->dwProductVersionMS;
+        *lpMinorVer = lpVersionInfo->dwProductVersionLS;
+        bSuccess = TRUE;
+
+    ON_GetVersion_ERROR:
+        if (lpData)
+            HeapFree(GetProcessHeap(), NULL, lpData);
         return bSuccess;
     }
 
