@@ -252,7 +252,7 @@
   5. Input __Activation Code__, then offline activation is done.
 
 ## 4. How to use
-  1. Download the latest release.
+  1. Download the latest release [from here](https://github.com/DoubleLabyrinth/navicat-keygen/releases).
 
   2. Replace __Navicat Activation Public Key__ in `navicat.exe` or `libcc.dll`.  
 
