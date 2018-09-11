@@ -263,6 +263,14 @@
          $ codesign -f -s "Your self-signed code-sign certificate name" <path to Navicat Premium.app>
          ```
 
+        Note: "Your self - signed code - sign certificate name" is the name of Your certificate, not a path.
+
+        Example:
+
+        ```bash
+        $ codesign -f -s "foobar" /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
+        ```   
+
   4. Then goto `navicat-keygen` folder and in Terminal:
 
      ```bash
