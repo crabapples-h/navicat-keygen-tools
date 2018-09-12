@@ -250,7 +250,7 @@
      5. 在Navicat软件中填入 __激活码__ 即可完成离线激活。
 
 ## 4. 如何使用这个Keygen
-  1. 下载最新的release。
+  1. [从这里](https://github.com/DoubleLabyrinth/navicat-keygen/releases)下载最新的release。
 
   2. 替换掉`navicat.exe`或`libcc.dll`里的 __Navicat激活公钥__。  
 
