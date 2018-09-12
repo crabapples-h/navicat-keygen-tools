@@ -114,10 +114,18 @@ int _tmain(int argc, TCHAR* argv[]) {
             goto ON_tmain_ERROR;
         }
     } else {
+        _tprintf_s(TEXT("Generating new RSA private key, it may take long time.\n"));
+
         do {
             cipher->GenerateKey(2048);
-        } while (patcher::Solution0::CheckKey(cipher) && patcher::Solution1::CheckKey(cipher));
-        cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>("RegPrivateKey.pem");
+        } while (!patcher::Solution0::CheckKey(cipher) || !patcher::Solution1::CheckKey(cipher));   // re-generate RSA key if one of CheckKey return FALSE
+
+        if (!cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem")) {
+            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+            _tprintf_s(TEXT("ERROR: Failed to save RSA private key.\n"));
+            goto ON_tmain_ERROR;
+        }
+
         _tprintf_s(TEXT("New RSA private key has been saved to RegPrivateKey.pem.\n"));
     }
 
@@ -141,7 +149,9 @@ int _tmain(int argc, TCHAR* argv[]) {
 
     if (!patcher::Solution0::Do(cipher))
         goto ON_tmain_ERROR;
-    
+
+    _tprintf_s(TEXT("RSA public key has been replaced by\n"));
+    printf_s("%s\n", cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>().c_str());
     _tprintf_s(TEXT("Solution0 has been done successfully.\n"));
     _tprintf_s(TEXT("\n"));
 
