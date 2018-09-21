@@ -54,7 +54,7 @@ public:
         return aCipher;
     }
 
-    bool GenerateKey(int bits, unsigned long long e = RSA_F4) {
+    bool GenerateKey(int bits, unsigned int e = RSA_F4) {
         bool bSuccess = false;
         BIGNUM* bn_e = nullptr;
 
