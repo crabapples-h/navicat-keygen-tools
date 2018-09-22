@@ -89,7 +89,7 @@ public:
         
         ret.resize(2 * srclen);
 
-        BF_encrypt(reinterpret_cast<BF_LONG*>(CV), &BlowfishKey);
+        BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
 
         const uint64_t* blocks = reinterpret_cast<const uint64_t*>(srcBytes);
         size_t blocks_len = srclen / BF_BLOCK;
@@ -101,13 +101,13 @@ public:
 
             temp.qword = blocks[i];
             temp.qword ^= *reinterpret_cast<uint64_t*>(CV);
-            BF_encrypt(reinterpret_cast<BF_LONG*>(temp.byte), &BlowfishKey);
+            BF_ecb_encrypt(temp.byte, temp.byte, &BlowfishKey, BF_ENCRYPT);
             *reinterpret_cast<uint64_t*>(CV) ^= temp.qword;
             BytesToHex(&temp, 8, ret.data() + 16 * i);
         }
 
         if (srclen % BF_BLOCK) {
-            BF_encrypt(reinterpret_cast<BF_LONG*>(CV), &BlowfishKey);
+            BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
             for (size_t i = 0; i < srclen % BF_BLOCK; ++i) {
                 CV[i] ^= reinterpret_cast<const uint8_t*>(blocks + blocks_len)[i];
             }
@@ -128,7 +128,7 @@ public:
 
         ret.resize(srclen / 2);
         
-        BF_encrypt(reinterpret_cast<BF_LONG*>(CV), &BlowfishKey);
+        BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
 
         const char(*blocks)[16] = reinterpret_cast<const char(*)[16]>(srchex);
         size_t blocks_len = srclen / 16;
@@ -140,7 +140,7 @@ public:
 
             HexToBytes(blocks[i], 16, temp.byte);
             temp2.qword = temp.qword;
-            BF_decrypt(reinterpret_cast<BF_LONG*>(temp.byte), &BlowfishKey);
+            BF_ecb_encrypt(temp.byte, temp.byte, &BlowfishKey, BF_DECRYPT);
             temp.qword ^= *reinterpret_cast<uint64_t*>(CV);
             *reinterpret_cast<uint64_t*>(ret.data() + 8 * i) = temp.qword;
             *reinterpret_cast<uint64_t*>(CV) ^= temp2.qword;
@@ -153,7 +153,7 @@ public:
             } temp = { };
             HexToBytes(blocks[blocks_len], srclen % 16, temp.byte);
 
-            BF_encrypt(reinterpret_cast<BF_LONG*>(CV), &BlowfishKey);
+            BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
             for (size_t i = 0; i < (srclen % 16) / 2; ++i)
                 ret[blocks_len * 8 + i] = temp.byte[i] ^ CV[i];
         }
