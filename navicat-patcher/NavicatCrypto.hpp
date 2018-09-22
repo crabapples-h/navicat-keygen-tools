@@ -5,6 +5,14 @@
 
 #include <string>
 
+#ifdef _DEBUG
+#pragma comment(lib, "libcryptoMTd.lib")
+#else
+#pragma comment(lib, "libcryptoMT.lib")
+#endif
+#pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL static lib
+#pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL static lib
+
 class Navicat11Crypto {
 protected:
     BF_KEY BlowfishKey;
