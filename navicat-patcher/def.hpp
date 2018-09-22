@@ -90,7 +90,7 @@ namespace Patcher {
 
         // Return error code
         // Return ERROR_SUCCESS if success
-        DWORD GetMainAppVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer);
+        // DWORD GetMainAppVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer);
 
         const std::Tstring& GetMainAppName();
 

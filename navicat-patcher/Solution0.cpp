@@ -1,11 +1,14 @@
 #include "def.hpp"
 
-// Solution0 is for navicat premium of which the version < 12.0.25
-namespace patcher::Solution0 {
+// The following APIs are in version.lib
+// GetFileVersionInfoSize
+// GetFileVersionInfo
+// VerQueryValue
+// #pragma comment(lib, "version.lib")     
 
-    static std::Tstring InstallationPath;
+namespace Patcher {
 
-    static const CHAR Keyword[] =
+    const char Solution0::Keyword[461] =
         "-----BEGIN PUBLIC KEY-----\r\n"
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw1dqF3SkCaAAmMzs889I\r\n"
         "qdW9M2dIdh3jG9yPcmLnmJiGpBF4E9VHSMGe8oPAy2kJDmdNt4BcEygvssEfginv\r\n"
@@ -16,171 +19,136 @@ namespace patcher::Solution0 {
         "awIDAQAB\r\n"
         "-----END PUBLIC KEY-----\r\n";
 
-    static const DWORD KeywordLength = sizeof(Keyword) - 1;
+    BOOL Solution0::SetPath(const std::Tstring& Path) {
+        DWORD Attr;
 
-    static LPCTSTR PossibleName[3] = {
-        TEXT("Navicat.exe"),    // for Linux compatible, main program name is "Navicat.exe" in Linux, case sensitive
-        TEXT("Modeler.exe"),    // for Linux compatible
-        TEXT("Rviewer.exe")     // for Linux compatible
-    };
-
-    static LPCTSTR TargetName = NULL;
-
-    static HMODULE hTarget = NULL;
-
-    BOOL Init(const std::Tstring& Path) {
-        BOOL bSuccess = FALSE;
-        DWORD dwLastError = ERROR_SUCCESS;
-        DWORD attr = INVALID_FILE_ATTRIBUTES;
-
-        attr = GetFileAttributes(Path.c_str());
-        if (attr == INVALID_FILE_ATTRIBUTES) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ GetFileAttributes. CODE: 0x%08X\n"), dwLastError);
-            goto ON_Init_ERROR;
+        Attr = GetFileAttributes(Path.c_str());
+        if (Attr == INVALID_FILE_ATTRIBUTES) {
+            if (GetLastError() == ERROR_INVALID_NAME || GetLastError() == ERROR_FILE_NOT_FOUND) 
+                REPORT_ERROR("ERROR: Invalid path. Are you sure the path you specified is correct?");
+            else 
+                REPORT_ERROR_WITH_CODE("ERROR: GetFileAttributes failed.", GetLastError());
+            return FALSE;
         }
 
-        if ((attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Error: Path is not a directory.\n"));
-            goto ON_Init_ERROR;
+        if ((Attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            REPORT_ERROR("ERROR: Path is not a directory.");
+            return FALSE;
         }
+
+        ReleaseFile();
 
         InstallationPath = Path;
         if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
             InstallationPath.push_back(TEXT('/'));  // for Linux compatible
 
-        bSuccess = TRUE;
-
-    ON_Init_ERROR:
-        return bSuccess;
-    }
-
-    BOOL CheckKey(RSACipher* cipher) {
         return TRUE;
     }
 
-    BOOL FindTargetFile() {
-        BOOL bSuccess = FALSE;
-        DWORD dwLastError = ERROR_SUCCESS;
-
-        for (size_t i = 0; i < _countof(PossibleName); ++i) {
-            std::Tstring&& PossibleFileName = InstallationPath + PossibleName[i];
-            
-            hTarget = LoadLibrary(PossibleFileName.c_str());
-            if (hTarget == NULL && (dwLastError = GetLastError()) != ERROR_MOD_NOT_FOUND) {
-                _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-                _tprintf_s(TEXT("Unexpected Error @ LoadLibrary. CODE: 0x%08X\n"), dwLastError);
-                goto ON_FindTargetFile_ERROR;
-            }
-            if (hTarget) {
-                _tprintf_s(TEXT("Target has been found: %s\n"), PossibleName[i]);
-                TargetName = PossibleName[i];
-                bSuccess = TRUE;
-                goto ON_FindTargetFile_ERROR;
-            }
-        }
-
-    ON_FindTargetFile_ERROR:
-        return bSuccess;
+    // Solution0 does not have any requirements for RSA-2048 key
+    BOOL Solution0::CheckKey(RSACipher* cipher) const {
+        return TRUE;
     }
 
-    BOOL CheckFile() {
-        BOOL bFound = FALSE;
+    DWORD Solution0::TryFile(const std::Tstring& Name) {
+        std::Tstring MainAppFullName = InstallationPath + Name;
+        HANDLE hFile;
+        
+        hFile = CreateFile(MainAppFullName.c_str(),
+                           GENERIC_READ | GENERIC_WRITE, 
+                           FILE_SHARE_READ,
+                           nullptr,                         // default SA
+                           OPEN_EXISTING, 
+                           FILE_ATTRIBUTE_NORMAL, 
+                           NULL);
+        if (hFile == INVALID_HANDLE_VALUE) 
+            return GetLastError();
+
+        ReleaseFile();
+
+        MainAppHandle = hFile;
+        MainAppName = Name;
+        return ERROR_SUCCESS;
+    }
+
+    DWORD Solution0::MapFile() {
         DWORD dwLastError = ERROR_SUCCESS;
-        HRSRC hRes = NULL;
-        HGLOBAL hGLobal = NULL;
-        PVOID lpData = NULL;
-        DWORD dwSize = 0;
+        HANDLE hMapping = NULL;
+        PVOID lpMapView = nullptr;
 
-        if (hTarget == NULL) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Error: Target has not been set yet.\n"));
-            goto ON_CheckFile_ERROR;
-        }
-
-        hRes = FindResource(hTarget, TEXT("ACTIVATIONPUBKEY"), RT_RCDATA);
-        if (hRes == NULL) {
+        hMapping = CreateFileMapping(MainAppHandle,
+                                     nullptr,           // default SA
+                                     PAGE_READWRITE,
+                                     0, 0,              // map all
+                                     nullptr);          // we don't need a name
+        if (hMapping == NULL) {
             dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ FindResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_CheckFile_ERROR;
+            goto ON_Solution0_MapFile_ERROR;
         }
 
-        hGLobal = LoadResource(hTarget, hRes);
-        if (hGLobal == NULL) {
+        lpMapView = MapViewOfFile(hMapping,
+                                  FILE_MAP_READ | FILE_MAP_WRITE,
+                                  0, 0, 0);             // map all
+        if (lpMapView == nullptr) {
             dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ LoadResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_CheckFile_ERROR;
+            goto ON_Solution0_MapFile_ERROR;
         }
 
-        lpData = LockResource(hGLobal);
-        if (lpData == NULL) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ LockResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_CheckFile_ERROR;
+        ReleaseMap();
+
+        MainAppMappingView = lpMapView;
+        lpMapView = nullptr;
+        MainAppMappingHandle = hMapping;
+        hMapping = NULL;
+
+    ON_Solution0_MapFile_ERROR:
+        if (hMapping)
+            CloseHandle(hMapping);
+        return dwLastError;
+    }
+
+    BOOL Solution0::FindPatchOffset() {
+        BOOL bFound = FALSE;
+        DWORD dwFileSize = 0;
+
+        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(MainAppMappingView);
+        dwFileSize = GetFileSize(MainAppHandle, nullptr);
+        
+        for (DWORD i = 0; i < dwFileSize; ++i) {
+            if (memcmp(lpFileContent + i, Keyword, KeywordLength) == 0) {
+                PatchOffset = i;
+                bFound = TRUE;
+                break;
+            }
         }
 
-        dwSize = SizeofResource(hTarget, hRes);
-        if (dwSize == 0) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ SizeofResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_CheckFile_ERROR;
-        }
-
-        if (dwSize == KeywordLength && memcmp(lpData, Keyword, KeywordLength) == 0) {
-            FreeLibrary(hTarget);
-            hTarget = NULL;
-            bFound = TRUE;
-        } else {
-            FreeLibrary(hTarget);
-            hTarget = NULL;
-            TargetName = NULL;
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: Resource doest not match.\n"));
-            goto ON_CheckFile_ERROR;
-        }
-
-    ON_CheckFile_ERROR:
+        if (bFound)
+            _tprintf_s(TEXT("MESSAGE: [Solution0] Keyword has been found: offset = +0x%08lx.\n"), PatchOffset);
         return bFound;
     }
 
-    BOOL BackupFile() {
-        BOOL bSuccess = FALSE;
-        DWORD dwLastError = ERROR_SUCCESS;
-        std::Tstring&& TargetFileName = InstallationPath + TargetName;
-        std::Tstring&& BackupFileName = InstallationPath + TargetName + TEXT(".backup");
-
-        if (!CopyFile(TargetFileName.c_str(), BackupFileName.c_str(), TRUE)) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ CopyFile. CODE: 0x%08X\n"), dwLastError);
-            goto ON_BackupFile_ERROR;
-        }
-
-        bSuccess = TRUE;
-    ON_BackupFile_ERROR:
-        return bSuccess;
+    DWORD Solution0::BackupFile() {
+        std::Tstring TargetFileFullName = InstallationPath + MainAppName;
+        std::Tstring BackupFileFullName = InstallationPath + MainAppName + TEXT(".backup");
+        
+        if (!CopyFile(TargetFileFullName.c_str(), BackupFileFullName.c_str(), TRUE))
+            return GetLastError();
+        else
+            return ERROR_SUCCESS;
     }
 
-    BOOL Do(RSACipher* cipher) {
+    BOOL Solution0::MakePatch(RSACipher* cipher) {
         BOOL bSuccess = FALSE;
-        DWORD dwLastError = ERROR_SUCCESS;
+        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(MainAppMappingView);
         std::string RSAPublicKeyPEM;
-        std::Tstring&& TargetFileName = InstallationPath + TargetName;
-        HANDLE hUpdater = NULL;
 
         RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
         if (RSAPublicKeyPEM.empty()) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: cipher->ExportKeyString failed.\n"));
+            REPORT_ERROR("ERROR: cipher->ExportKeyString failed.");
             goto ON_Do_ERROR;
         }
 
+        // lambda function, replace '\n' to '\r\n'
         [](std::string& str, const std::string& OldSub, const std::string& NewSub) {
             std::string::size_type pos = 0;
             std::string::size_type srclen = OldSub.size();
@@ -190,96 +158,105 @@ namespace patcher::Solution0 {
                 str.replace(pos, srclen, NewSub);
                 pos += dstlen;
             }
-        } (RSAPublicKeyPEM, "\n", "\r\n");  // replace '\n' to '\r\n'
+        } (RSAPublicKeyPEM, "\n", "\r\n");
 
         if (RSAPublicKeyPEM.length() != KeywordLength) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: Public key length does not match.\n"));
+            REPORT_ERROR("ERROR: Public key length does not match.");
             goto ON_Do_ERROR;
         }
 
-        hUpdater = BeginUpdateResource(TargetFileName.c_str(), FALSE);
-        if (hUpdater == NULL) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ BeginUpdateResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_Do_ERROR;
-        }
+        _tprintf_s(TEXT("@%s+0x%08X\nPrevious:\n"), MainAppName.c_str(), PatchOffset);
+        Helper::PrintMemory(lpFileContent + PatchOffset,
+                            lpFileContent + PatchOffset + KeywordLength, 
+                            lpFileContent);
 
-        if (!UpdateResource(hUpdater,
-                            RT_RCDATA,
-                            TEXT("ACTIVATIONPUBKEY"),
-                            MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
-                            (LPVOID)RSAPublicKeyPEM.c_str(), 
-                            KeywordLength)) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ UpdateResource. CODE: 0x%08X\n"), dwLastError);
-            goto ON_Do_ERROR;
-        } 
-        
+        memcpy(lpFileContent + PatchOffset, RSAPublicKeyPEM.c_str(), KeywordLength);
+
+        PRINT_MESSAGE("After:");
+        Helper::PrintMemory(lpFileContent + PatchOffset,
+                            lpFileContent + PatchOffset + KeywordLength,
+                            lpFileContent);
+        PRINT_MESSAGE("");
+
         bSuccess = TRUE;
-
     ON_Do_ERROR:
-        EndUpdateResource(hUpdater, !bSuccess);
         return bSuccess;
     }
 
-    BOOL GetVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer) {
-        BOOL bSuccess = FALSE;
-        DWORD dwLastError = ERROR_SUCCESS;
-        std::Tstring&& TargetFileName = InstallationPath + TargetName;
-        DWORD dwSize = 0;
-        PVOID lpData = NULL;
-        VS_FIXEDFILEINFO* lpVersionInfo = NULL;
-        UINT VersionInfoSize = 0;
+//     DWORD Solution0::GetMainAppVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer) {
+//         BOOL bSuccess = FALSE;
+//         DWORD dwLastError = ERROR_SUCCESS;
+//         std::Tstring TargetFileFullName = InstallationPath + MainAppName;
+// 
+//         DWORD dwSize = 0;
+//         PVOID lpData = NULL;
+//         VS_FIXEDFILEINFO* lpVersionInfo = NULL;
+//         UINT VersionInfoSize = 0;
+// 
+//         dwSize = GetFileVersionInfoSize(TargetFileFullName.c_str(), 
+//                                         &dwSize);   // MSDN doesn't say it can be NULL.
+//                                                     // so I use dwSize to receive this deprecated value
+//         if (dwSize == 0) {
+//             dwLastError = GetLastError();
+//             REPORT_ERROR_WITH_CODE("ERROR: GetFileVersionInfoSize failed.", dwLastError);
+//             goto ON_Solution0_GetMainAppVersion_ERROR;
+//         }
+// 
+//         lpData = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+//         if (lpData == nullptr) {
+//             dwLastError = GetLastError();
+//             REPORT_ERROR_WITH_CODE("ERROR: HeapAlloc failed.", dwLastError);
+//             goto ON_Solution0_GetMainAppVersion_ERROR;
+//         }
+// 
+//         if (!GetFileVersionInfo(TargetFileFullName.c_str(), NULL, dwSize, lpData)) {
+//             dwLastError = GetLastError();
+//             REPORT_ERROR_WITH_CODE("ERROR: GetFileVersionInfo failed.", dwLastError);
+//             goto ON_Solution0_GetMainAppVersion_ERROR;
+//         }
+// 
+//         if (!VerQueryValue(lpData, TEXT("\\"), reinterpret_cast<LPVOID*>(&lpVersionInfo), &VersionInfoSize)) {
+//             dwLastError = GetLastError();
+//             REPORT_ERROR_WITH_CODE("ERROR: VerQueryValue failed.", dwLastError);
+//             goto ON_Solution0_GetMainAppVersion_ERROR;
+//         }
+// 
+//         *lpMajorVer = lpVersionInfo->dwProductVersionMS;
+//         *lpMinorVer = lpVersionInfo->dwProductVersionLS;
+// 
+//         bSuccess = TRUE;
+//     ON_Solution0_GetMainAppVersion_ERROR:
+//         if (lpData)
+//             HeapFree(GetProcessHeap(), NULL, lpData);
+//         return bSuccess;
+//     }
 
-        dwSize = GetFileVersionInfoSize(TargetFileName.c_str(), 
-                                        &dwSize);   // MSDN doesn't say it can be NULL.
-                                                    // so I use dwSize to receive this deprecated value
-        if (dwSize == 0) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ GetFileVersionInfoSize. CODE: 0x%08X\n"), dwLastError);
-            goto ON_GetVersion_ERROR;
-        }
-
-        lpData = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
-        if (lpData == NULL) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ HeapAlloc. CODE: 0x%08X\n"), dwLastError);
-            goto ON_GetVersion_ERROR;
-        }
-
-        if (!GetFileVersionInfo(TargetFileName.c_str(), NULL, dwSize, lpData)) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ GetFileVersionInfo. CODE: 0x%08X\n"), dwLastError);
-            goto ON_GetVersion_ERROR;
-        }
-
-        if (!VerQueryValue(lpData, TEXT("\\"), (LPVOID*)&lpVersionInfo, &VersionInfoSize)) {
-            dwLastError = GetLastError();
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("Failed @ VerQueryValue. CODE: 0x%08X\n"), dwLastError);
-            goto ON_GetVersion_ERROR;
-        }
-
-        *lpMajorVer = lpVersionInfo->dwProductVersionMS;
-        *lpMinorVer = lpVersionInfo->dwProductVersionLS;
-        bSuccess = TRUE;
-
-    ON_GetVersion_ERROR:
-        if (lpData)
-            HeapFree(GetProcessHeap(), NULL, lpData);
-        return bSuccess;
+    const std::Tstring& Solution0::GetMainAppName() {
+        return MainAppName;
     }
 
-    VOID Finalize() {
-        if (hTarget) {
-            FreeLibrary(hTarget);
-            hTarget = NULL;
+    void Solution0::ReleaseFile() {
+        ReleaseMap();
+
+        if (MainAppHandle != INVALID_HANDLE_VALUE && MainAppHandle) {
+            CloseHandle(MainAppHandle);
+            MainAppHandle = INVALID_HANDLE_VALUE;
         }
+    }
+
+    void Solution0::ReleaseMap() {
+        if (MainAppMappingView) {
+            UnmapViewOfFile(MainAppMappingView);
+            MainAppMappingView = nullptr;
+        }
+
+        if (MainAppMappingHandle) {
+            CloseHandle(MainAppMappingHandle);
+            MainAppMappingHandle = NULL;
+        }
+    }
+
+    Solution0::~Solution0() {
+        ReleaseFile();
     }
 }

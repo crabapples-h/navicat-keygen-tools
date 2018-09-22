@@ -1,188 +1,254 @@
 #include "def.hpp"
 
-bool ConvertToUTF8(LPCSTR from, std::string& to) {
-    bool bSuccess = false;
-    int len = 0;
-    LPWSTR lpUnicodeString = nullptr;
-
-    len = MultiByteToWideChar(CP_ACP, NULL, from, -1, NULL, 0);
-    if (len == 0)
-        goto ON_ConvertToUTF8_0_ERROR;
-
-    lpUnicodeString = reinterpret_cast<LPWSTR>(HeapAlloc(GetProcessHeap(),
-                                                         HEAP_ZERO_MEMORY,
-                                                         len * sizeof(WCHAR)));
-    if (lpUnicodeString == nullptr)
-        goto ON_ConvertToUTF8_0_ERROR;
-
-    if (!MultiByteToWideChar(CP_ACP, NULL, from, -1, lpUnicodeString, len))
-        goto ON_ConvertToUTF8_0_ERROR;
-
-    len = WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, NULL, 0, NULL, NULL);
-    if (len == 0)
-        goto ON_ConvertToUTF8_0_ERROR;
-
-    to.resize(len);
-    if (!WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, to.data(), len, NULL, NULL))
-        goto ON_ConvertToUTF8_0_ERROR;
-
-    while (to.back() == 0)
-        to.pop_back();
-
-    bSuccess = true;
-
-ON_ConvertToUTF8_0_ERROR:
-    if (lpUnicodeString)
-        HeapFree(GetProcessHeap(), NULL, lpUnicodeString);
-    return bSuccess;
+static void help() {
+    PRINT_MESSAGE("Usage:");
+    PRINT_MESSAGE("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]");
 }
 
-bool ConvertToUTF8(LPCWSTR from, std::string& to) {
-    bool bSuccess = false;
-    int len = 0;
+static BOOL LoadKey(RSACipher* cipher, LPTSTR filename, Patcher::Solution0* pSolution0, Patcher::Solution1* pSolution1) {
+    if (filename) {
+        std::string PrivateKeyFileName;
 
-    len = WideCharToMultiByte(CP_UTF8, NULL, from, -1, NULL, 0, NULL, NULL);
-    if (len == 0)
-        goto ON_ConvertToUTF8_1_ERROR;
+        if (!Helper::ConvertToUTF8(filename, PrivateKeyFileName)) {
+            REPORT_ERROR("ERROR: ConvertToUTF8 failed.");
+            return FALSE;
+        }
 
-    to.resize(len);
-    if (!WideCharToMultiByte(CP_UTF8, NULL, from, -1, to.data(), len, NULL, NULL))
-        goto ON_ConvertToUTF8_1_ERROR;
+        if (!cipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>(PrivateKeyFileName)) {
+            REPORT_ERROR("ERROR: cipher->ImportKeyFromFile failed.");
+            return FALSE;
+        }
 
-    while (to.back() == 0)
-        to.pop_back();
+        if (pSolution0 && !pSolution0->CheckKey(cipher) || 
+            pSolution1 && !pSolution1->CheckKey(cipher)) {
+            REPORT_ERROR("ERROR: The RSA private key you provide cannot be used.");
+            return FALSE;
+        }
 
-    bSuccess = true;
+    } else {
+        PRINT_MESSAGE("MESSAGE: Generating new RSA private key, it may take a long time.");
 
-ON_ConvertToUTF8_1_ERROR:
-    return bSuccess;
-}
+        do {
+            cipher->GenerateKey(2048);
+        } while (pSolution0 && !pSolution0->CheckKey(cipher) || 
+                 pSolution1 && !pSolution1->CheckKey(cipher));   // re-generate RSA key if one of CheckKey return FALSE
 
-bool ConvertToUTF8(std::string& str) {
-    bool bSuccess = false;
+        if (!cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem")) {
+            REPORT_ERROR("ERROR: Failed to save RSA private key.");
+            return FALSE;
+        }
 
-    std::string temp;
-    bSuccess = ConvertToUTF8(str.c_str(), temp);
-    if (!bSuccess)
-        return false;
+        PRINT_MESSAGE("MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.");
+    }
 
-    str = temp;
-    return true;
+    std::string PublicKeyString = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+    if (PublicKeyString.empty()) {
+        REPORT_ERROR("ERROR: cipher->ExportKeyString failed.");
+        return FALSE;
+    }
+
+    PRINT_MESSAGE("Your RSA public key:");
+    PRINT_LPCSTR(PublicKeyString.c_str());
+    return TRUE;
 }
 
 int _tmain(int argc, TCHAR* argv[]) {
     if (argc != 2 && argc != 3) {
-        _tprintf_s(TEXT("Usage:\n"));
-        _tprintf_s(TEXT("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]\n"));
+        help();
         return 0;
     }
 
-    RSACipher* cipher = NULL;
-    DWORD dwMajorVer = 0;
-    DWORD dwMinorVer = 0;
+    RSACipher* cipher = nullptr;
+    Patcher::Solution0* pSolution0 = nullptr;
+    Patcher::Solution1* pSolution1 = nullptr;
+    
+    DWORD ErrorCode;
 
     cipher = RSACipher::Create();
-    if (cipher == NULL) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-        _tprintf_s(TEXT("RSACipher::Create failed.\n"));
+    if (cipher == nullptr) {
+        REPORT_ERROR("ERROR: RSACipher::Create failed.");
         goto ON_tmain_ERROR;
     }
 
-    if (!patcher::Solution0::Init(argv[1]))
+    pSolution0 = new Patcher::Solution0();
+    pSolution1 = new Patcher::Solution1();
+
+    if (!pSolution0->SetPath(argv[1])) {
+        PRINT_MESSAGE("The path you specified:");
+        PRINT_LPCTSTR(argv[1]);
         goto ON_tmain_ERROR;
-    if (!patcher::Solution1::Init(argv[1]))
+    }
+    if (!pSolution1->SetPath(argv[1])) {
+        PRINT_MESSAGE("The path you specified:");
+        PRINT_LPCTSTR(argv[1]);
         goto ON_tmain_ERROR;
+    }
 
-    if (argc == 3) {
-        std::string PrivateKeyFileName;
+FindMainApp:
+    ErrorCode = pSolution0->TryFile(TEXT("Navicat.exe"));
+    if (ErrorCode == ERROR_SUCCESS) {
+        PRINT_MESSAGE("MESSAGE: Navicat.exe has been found.");
+        goto FindLibcc;
+    }else if (ErrorCode == ERROR_ACCESS_DENIED) {
+        PRINT_MESSAGE("ERROR: Cannot open Navicat.exe for ERROR_ACCESS_DENIED.");
+        PRINT_MESSAGE("Please re-run with Administrator privilege.");
+        goto ON_tmain_ERROR;
+    }
+    if (ErrorCode != ERROR_FILE_NOT_FOUND) {
+        REPORT_ERROR_WITH_CODE("ERROR: Cannot open Navicat.exe.", ErrorCode);
+        goto ON_tmain_ERROR;
+    }
 
-        if (!ConvertToUTF8(argv[2], PrivateKeyFileName)) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: ConvertToUTF8 failed.\n"));
-            goto ON_tmain_ERROR;
-        }
+    ErrorCode = pSolution0->TryFile(TEXT("Modeler.exe"));
+    if (ErrorCode == ERROR_SUCCESS) {
+        PRINT_MESSAGE("MESSAGE: Modeler.exe has been found.");
+        goto FindLibcc;
+    }
+    if (ErrorCode == ERROR_ACCESS_DENIED) {
+        PRINT_MESSAGE("ERROR: Cannot open Modeler.exe for ERROR_ACCESS_DENIED.");
+        PRINT_MESSAGE("Please re-run with Administrator privilege.");
+        goto ON_tmain_ERROR;
+    }
+    if (ErrorCode != ERROR_FILE_NOT_FOUND) {
+        REPORT_ERROR_WITH_CODE("ERROR: Cannot open Modeler.exe.", ErrorCode);
+        goto ON_tmain_ERROR;
+    }
 
-        if (!cipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>(PrivateKeyFileName)) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: cipher->ImportKeyFromFile failed.\n"));
-            goto ON_tmain_ERROR;
-        }
+    ErrorCode = pSolution0->TryFile(TEXT("Rviewer.exe"));
+    if (ErrorCode == ERROR_SUCCESS) {
+        PRINT_MESSAGE("MESSAGE: Rviewer.exe has been found.");
+        goto FindLibcc;
+    }
+    if (ErrorCode == ERROR_ACCESS_DENIED) {
+        PRINT_MESSAGE("ERROR: Cannot open Rviewer.exe for ERROR_ACCESS_DENIED.");
+        PRINT_MESSAGE("Please re-run with Administrator privilege.");
+        goto ON_tmain_ERROR;
+    }
+    if (ErrorCode != ERROR_FILE_NOT_FOUND) {
+        REPORT_ERROR_WITH_CODE("ERROR: Cannot open Rviewer.exe.", ErrorCode);
+        goto ON_tmain_ERROR;
+    }
 
-        if (patcher::Solution0::CheckKey(cipher) == FALSE || patcher::Solution1::CheckKey(cipher) == FALSE) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: RSA private key specified cannot be used.\n"));
-            goto ON_tmain_ERROR;
-        }
+    PRINT_MESSAGE("ERROR: Cannot find main application. Are you sure the path you specified is correct?");
+    PRINT_MESSAGE("The path you specified:");
+    PRINT_LPCTSTR(argv[1]);
+    goto ON_tmain_ERROR;
+
+FindLibcc:
+    ErrorCode = pSolution1->TryFile(TEXT("libcc.dll"));
+    if (ErrorCode == ERROR_SUCCESS) {
+        PRINT_MESSAGE("MESSAGE: libcc.dll has been found.");
+    } else if (ErrorCode == ERROR_FILE_NOT_FOUND) {
+        PRINT_MESSAGE("MESSAGE: libcc.dll is not found. Solution1 will be omitted.");
+        delete pSolution1;
+        pSolution1 = nullptr;
+    } else if (ErrorCode == ERROR_ACCESS_DENIED) {
+        PRINT_MESSAGE("ERROR: Cannot open libcc.dll for ERROR_ACCESS_DENIED.");
+        PRINT_MESSAGE("Please re-run with Administrator privilege.");
+        goto ON_tmain_ERROR;
     } else {
-        _tprintf_s(TEXT("Generating new RSA private key, it may take long time.\n"));
+        REPORT_ERROR_WITH_CODE("ERROR: Cannot open libcc.dll.", ErrorCode);
+        goto ON_tmain_ERROR;
+    }
 
-        do {
-            cipher->GenerateKey(2048);
-        } while (!patcher::Solution0::CheckKey(cipher) || !patcher::Solution1::CheckKey(cipher));   // re-generate RSA key if one of CheckKey return FALSE
+SearchPublicKey:
+    PRINT_MESSAGE("");
+    ErrorCode = pSolution0->MapFile();
+    if (ErrorCode != ERROR_SUCCESS) {
+        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+        _tprintf_s(TEXT("ERROR: Cannot map %s. CODE: 0x%08X\n"), 
+                   pSolution0->GetMainAppName().c_str(), 
+                   ErrorCode);
+        goto ON_tmain_ERROR;
+    }
+    if (!pSolution0->FindPatchOffset()) {
+        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
+        _tprintf_s(TEXT("ERROR: Cannot find RSA public key in %s.\n"),
+                   pSolution0->GetMainAppName().c_str());
+        goto ON_tmain_ERROR;
+    }
 
-        if (!cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem")) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: Failed to save RSA private key.\n"));
+    if (pSolution1) {
+        ErrorCode = pSolution1->MapFile();
+        if (ErrorCode != ERROR_SUCCESS) {
+            REPORT_ERROR_WITH_CODE("ERROR: Cannot map libcc.dll.", ErrorCode);
             goto ON_tmain_ERROR;
         }
-
-        _tprintf_s(TEXT("New RSA private key has been saved to RegPrivateKey.pem.\n"));
+        if (!pSolution1->FindPatchOffset()) {
+            PRINT_MESSAGE("MESSAGE: Cannot find RSA public key in libcc.dll. Solution1 will be omitted.");
+            delete pSolution1;
+            pSolution1 = nullptr;
+        }
     }
 
-    // ------------------
-    // begin Solution0
-    // ------------------
-    if (!patcher::Solution0::FindTargetFile()) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-        _tprintf_s(TEXT("ERROR: Cannot find main program. Are you sure the path you specified is correct?\n"));
+LoadingKey:
+    PRINT_MESSAGE("");
+    if (!LoadKey(cipher, argc == 3 ? argv[2] : nullptr, pSolution0, pSolution1))
+        goto ON_tmain_ERROR;
+
+BackupFiles:
+    PRINT_MESSAGE("");
+    ErrorCode = pSolution0->BackupFile();
+    if (ErrorCode == ERROR_SUCCESS) {
+        _tprintf_s(TEXT("MESSAGE: %s has been backed up successfully.\n"), 
+                   pSolution0->GetMainAppName().c_str());
+    } else if (ErrorCode == ERROR_ACCESS_DENIED) {
+        _tprintf_s(TEXT("ERROR: Cannot back up %s for ERROR_ACCESS_DENIED.\n"), 
+                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("Please re-run with Administrator privilege.\n"));
+        goto ON_tmain_ERROR;
+    } else if (ErrorCode == ERROR_FILE_EXISTS) {
+        _tprintf_s(TEXT("ERROR: The backup of %s has been found.\n"), 
+                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"), 
+                   pSolution0->GetMainAppName().c_str(), 
+                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"), 
+                   pSolution0->GetMainAppName().c_str(),
+                   pSolution0->GetMainAppName().c_str(), 
+                   pSolution0->GetMainAppName().c_str());
+        goto ON_tmain_ERROR;
+    } else {
+        _tprintf_s(TEXT("ERROR: Cannot back up %s. CODE: 0x%08X\n"),
+                   pSolution0->GetMainAppName().c_str(),
+                   ErrorCode);
         goto ON_tmain_ERROR;
     }
 
-    if (!patcher::Solution0::GetVersion(&dwMajorVer, &dwMinorVer))
+    if (pSolution1) {
+        ErrorCode = pSolution1->BackupFile();
+        if (ErrorCode == ERROR_SUCCESS) {
+            PRINT_MESSAGE("MESSAGE: libcc.dll has been backed up successfully.");
+        } else if (ErrorCode == ERROR_ACCESS_DENIED) {
+            PRINT_MESSAGE("ERROR: Cannot back up libcc.dll for ERROR_ACCESS_DENIED.");
+            PRINT_MESSAGE("Please re-run with Administrator privilege.");
+            goto ON_tmain_ERROR;
+        } else if (ErrorCode == ERROR_FILE_EXISTS) {
+            PRINT_MESSAGE("ERROR: The backup of libcc.dll has been found.");
+            PRINT_MESSAGE("Please remove libcc.dll.backup in Navicat installation path if you're sure libcc.dll has not been patched.");
+            PRINT_MESSAGE("Otherwise please restore libcc.dll by libcc.dll.backup and remove libcc.dll.backup then try again.");
+            goto ON_tmain_ERROR;
+        } else {
+            REPORT_ERROR_WITH_CODE("ERROR: Cannot back up libcc.dll.", ErrorCode);
+            goto ON_tmain_ERROR;
+        }
+    }
+
+MakingPatch:
+    PRINT_MESSAGE("");
+    if (!pSolution0->MakePatch(cipher))
         goto ON_tmain_ERROR;
 
-    if (!patcher::Solution0::CheckFile()) 
+    if (pSolution1 && !pSolution1->MakePatch(cipher))
         goto ON_tmain_ERROR;
 
-    if (!patcher::Solution0::BackupFile())
-        goto ON_tmain_ERROR;
-
-    if (!patcher::Solution0::Do(cipher))
-        goto ON_tmain_ERROR;
-
-    _tprintf_s(TEXT("RSA public key has been replaced by\n"));
-    printf_s("%s\n", cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>().c_str());
-    _tprintf_s(TEXT("Solution0 has been done successfully.\n"));
-    _tprintf_s(TEXT("\n"));
-
-    // for ver <= 12.0.24
-    if (dwMajorVer == 0x000c0000 && dwMinorVer < 0x00180000)
-        goto ON_tmain_ERROR;    // you don't need Solution1 patch.
-
-    // ------------------
-    // begin Solution1
-    // ------------------
-    if (!patcher::Solution1::FindTargetFile()) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-        _tprintf_s(TEXT("ERROR: Cannot find libcc.dll. Are you sure the path you specified is correct?\n"));
-        goto ON_tmain_ERROR;
-    }    
-
-    if (!patcher::Solution1::FindOffset())
-        goto ON_tmain_ERROR;
-
-    if (!patcher::Solution1::BackupFile())
-        goto ON_tmain_ERROR;
-
-    if (!patcher::Solution1::Do(cipher))
-        goto ON_tmain_ERROR;
-
-    _tprintf_s(TEXT("Solution1 has been done successfully.\n"));
-    _tprintf_s(TEXT("\n"));
+    PRINT_MESSAGE("Solution0 has been done successfully.");
+    if (pSolution1)
+        PRINT_MESSAGE("Solution1 has been done successfully.");
 
 ON_tmain_ERROR:
-    patcher::Solution1::Finalize();
-    patcher::Solution0::Finalize();
+    delete pSolution1;
+    delete pSolution0;
     delete cipher;
     return 0;
 }
