@@ -121,7 +121,7 @@ void Process(RSACipher* cipher, int mode, int flag) {
         std::cout << std::endl;
 
         keygen.SetProductSignature(product);
-        keygen.SetLanguageSigature(language);
+        keygen.SetLanguageSignature(language);
     }
     
     if (mode == MODE_ADVANCED) {
@@ -148,7 +148,7 @@ void Process(RSACipher* cipher, int mode, int flag) {
         language1 = static_cast<uint8_t>(num);
 
         keygen.SetProductSignature(product0);
-        keygen.SetLanguageSigature(language0, language1);
+        keygen.SetLanguageSignature(language0, language1);
     }
     
     if (!Helper::ReadNumber<0, 16 - 1>(num,

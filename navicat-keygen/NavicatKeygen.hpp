@@ -58,7 +58,7 @@ public:
         data[1] = 0x2A;
     }
 
-    void SetLanguageSigature(Language _language) {
+    void SetLanguageSignature(Language _language) {
         switch (_language) {
         case Language::English:
             data[5] = 0xAC;       // Must be 0xAC for English version.
@@ -109,7 +109,7 @@ public:
         }
     }
 
-    void SetLanguageSigature(uint8_t value0, uint8_t value1) {
+    void SetLanguageSignature(uint8_t value0, uint8_t value1) {
         data[5] = value0;
         data[6] = value1;
     }
