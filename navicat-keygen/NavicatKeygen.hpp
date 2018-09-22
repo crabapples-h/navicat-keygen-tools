@@ -38,93 +38,6 @@ private:
     std::uniform_int_distribution<int> rand;
     uint8_t data[10];
 
-    void SetLanguageSigature(Language _language) {
-        switch (_language) {
-            case Language::English:
-                data[5] = 0xAC;       // Must be 0xAC for English version.
-                data[6] = 0x88;       // Must be 0x88 for English version.
-                break;
-            case Language::SimplifiedChinese:
-                data[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
-                data[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
-                break;
-            case Language::TraditionalChinese:
-                data[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
-                data[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
-                break;
-            case Language::Japanese:
-                data[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
-                data[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
-                break;
-            case Language::Polish:
-                data[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
-                data[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
-                break;
-            case Language::Spanish:
-                data[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
-                data[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
-                break;
-            case Language::French:
-                data[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
-                data[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
-                break;
-            case Language::German:
-                data[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
-                data[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
-                break;
-            case Language::Korean:
-                data[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
-                data[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
-                break;
-            case Language::Russian:
-                data[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
-                data[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
-                break;
-            case Language::Portuguese:
-                data[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
-                data[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
-                break;
-            default:
-                break;
-        }
-    }
-
-    void SetProductSignature(Product _product) {
-        switch (_product) {
-            case Product::DataModeler:
-                data[7] = 0x47;
-                break;
-            case Product::Premium:
-                data[7] = 0x65;
-                break;
-            case Product::MySQL:
-                data[7] = 0x68;
-                break;
-            case Product::PostgreSQL:
-                data[7] = 0x6C;
-                break;
-            case Product::Oracle:
-                data[7] = 0x70;
-                break;
-            case Product::SQLServer:
-                data[7] = 0x74;
-                break;
-            case Product::SQLite:
-                data[7] = 0x78;
-                break;
-            case Product::MariaDB:
-                data[7] = 0x7C;
-                break;
-            case Product::MongoDB:
-                data[7] = 0x80;
-                break;
-            case Product::ReportViewer:
-                data[7] = 0xb;
-            default:
-                break;
-        }
-    }
-
     void DoEncrypt() {
         const_DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
         DES_key_schedule schedule;
@@ -145,15 +58,111 @@ public:
         data[1] = 0x2A;
     }
 
-    void Generate(uint8_t version, Language language, Product product) {
+    void SetLanguageSigature(Language _language) {
+        switch (_language) {
+        case Language::English:
+            data[5] = 0xAC;       // Must be 0xAC for English version.
+            data[6] = 0x88;       // Must be 0x88 for English version.
+            break;
+        case Language::SimplifiedChinese:
+            data[5] = 0xCE;       // Must be 0xCE for Simplified Chinese version.
+            data[6] = 0x32;       // Must be 0x32 for Simplified Chinese version.
+            break;
+        case Language::TraditionalChinese:
+            data[5] = 0xAA;       // Must be 0xAA for Traditional Chinese version.
+            data[6] = 0x99;       // Must be 0x99 for Traditional Chinese version.
+            break;
+        case Language::Japanese:
+            data[5] = 0xAD;       // Must be 0xAD for Japanese version. Discoverer: @dragonflylee
+            data[6] = 0x82;       // Must be 0x82 for Japanese version. Discoverer: @dragonflylee
+            break;
+        case Language::Polish:
+            data[5] = 0xBB;       // Must be 0xBB for Polish version. Discoverer: @dragonflylee
+            data[6] = 0x55;       // Must be 0x55 for Polish version. Discoverer: @dragonflylee
+            break;
+        case Language::Spanish:
+            data[5] = 0xAE;       // Must be 0xAE for Spanish version. Discoverer: @dragonflylee
+            data[6] = 0x10;       // Must be 0x10 for Spanish version. Discoverer: @dragonflylee
+            break;
+        case Language::French:
+            data[5] = 0xFA;       // Must be 0xFA for French version. Discoverer: @Deltafox79
+            data[6] = 0x20;       // Must be 0x20 for French version. Discoverer: @Deltafox79
+            break;
+        case Language::German:
+            data[5] = 0xB1;       // Must be 0xB1 for German version. Discoverer: @dragonflylee
+            data[6] = 0x60;       // Must be 0x60 for German version. Discoverer: @dragonflylee
+            break;
+        case Language::Korean:
+            data[5] = 0xB5;       // Must be 0xB5 for Korean version. Discoverer: @dragonflylee
+            data[6] = 0x60;       // Must be 0x60 for Korean version. Discoverer: @dragonflylee
+            break;
+        case Language::Russian:
+            data[5] = 0xEE;       // Must be 0xB5 for Russian version. Discoverer: @dragonflylee
+            data[6] = 0x16;       // Must be 0x60 for Russian version. Discoverer: @dragonflylee
+            break;
+        case Language::Portuguese:
+            data[5] = 0xCD;       // Must be 0xCD for Portuguese version. Discoverer: @dragonflylee
+            data[6] = 0x49;       // Must be 0x49 for Portuguese version. Discoverer: @dragonflylee
+            break;
+        default:
+            break;
+        }
+    }
+
+    void SetLanguageSigature(uint8_t value0, uint8_t value1) {
+        data[5] = value0;
+        data[6] = value1;
+    }
+
+    void SetProductSignature(Product _product) {
+        switch (_product) {
+        case Product::DataModeler:
+            data[7] = 0x47;
+            break;
+        case Product::Premium:
+            data[7] = 0x65;
+            break;
+        case Product::MySQL:
+            data[7] = 0x68;
+            break;
+        case Product::PostgreSQL:
+            data[7] = 0x6C;
+            break;
+        case Product::Oracle:
+            data[7] = 0x70;
+            break;
+        case Product::SQLServer:
+            data[7] = 0x74;
+            break;
+        case Product::SQLite:
+            data[7] = 0x78;
+            break;
+        case Product::MariaDB:
+            data[7] = 0x7C;
+            break;
+        case Product::MongoDB:
+            data[7] = 0x80;
+            break;
+        case Product::ReportViewer:
+            data[7] = 0xb;
+        default:
+            break;
+        }
+    }
+
+    void SetProductSignature(uint8_t value) {
+        data[7] = value;
+    }
+
+    void SetVersion(uint8_t version) {
+        data[8] = version << 4;
+    }
+
+    void Generate() {
         data[2] = rand(rand_eng);
         data[3] = rand(rand_eng);
         data[4] = rand(rand_eng);
-        SetLanguageSigature(language);
-        SetProductSignature(product);
-        data[8] = version << 4;
         data[9] = 0x32;
-
         DoEncrypt();
     }
 
@@ -161,7 +170,7 @@ public:
         std::string Key;
         const char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-        Key.resize(16 + 1);
+        Key.resize(16);
         Key[0] = EncodeTable[data[0] >> 3];
         Key[1] = EncodeTable[(data[0] & 0x07) << 2 | data[1] >> 6];
         Key[2] = EncodeTable[data[1] >> 1 & 0x1F];
@@ -179,20 +188,21 @@ public:
         Key[13] = EncodeTable[data[8] >> 2 & 0x1F];
         Key[14] = EncodeTable[data[8] << 3 & 0x1F | data[9] >> 5];
         Key[15] = EncodeTable[data[9] & 0x1F];
-        Key[16] = 0;
 
         return Key;
     }
 
     std::string GetFormatedKey() const {
         std::string Key = GetKey();
-
         auto ptr = Key.begin() + 4;
-        Key.insert(ptr++, '-');
+
+        ptr = Key.insert(ptr, '-');
+        ptr++;
         ptr += 4;
-        Key.insert(ptr++, '-');
+        ptr = Key.insert(ptr, '-');
+        ptr++;
         ptr += 4;
-        Key.insert(ptr++, '-');
+        Key.insert(ptr, '-');
 
         return Key;
     }

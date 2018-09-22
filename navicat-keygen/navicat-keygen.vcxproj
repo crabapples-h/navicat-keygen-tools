@@ -166,7 +166,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="_tmain.cpp" />
+    <ClCompile Include="Helper.cpp" />
+    <ClCompile Include="Process.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NavicatKeygen.hpp" />
