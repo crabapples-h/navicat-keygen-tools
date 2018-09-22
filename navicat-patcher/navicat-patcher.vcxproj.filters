@@ -18,45 +18,24 @@
     <ClCompile Include="_tmain.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="NavicatCrypto\aes.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="NavicatCrypto\aes_constant.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="NavicatCrypto\blowfish.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="NavicatCrypto\sha1.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="EncryptPublicKey.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Solution0.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Solution1.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Helper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NavicatCrypto\aes.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="NavicatCrypto\blowfish.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="NavicatCrypto\NavicatCrypto.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="NavicatCrypto\sha1.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="def.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="RSACipher.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NavicatCrypto.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

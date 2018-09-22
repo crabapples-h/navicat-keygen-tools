@@ -166,21 +166,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EncryptPublicKey.cpp" />
-    <ClCompile Include="NavicatCrypto\aes.c" />
-    <ClCompile Include="NavicatCrypto\aes_constant.c" />
-    <ClCompile Include="NavicatCrypto\blowfish.c" />
-    <ClCompile Include="NavicatCrypto\sha1.c" />
+    <ClCompile Include="Helper.cpp" />
     <ClCompile Include="Solution0.cpp" />
     <ClCompile Include="Solution1.cpp" />
     <ClCompile Include="_tmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="def.hpp" />
-    <ClInclude Include="NavicatCrypto\aes.h" />
-    <ClInclude Include="NavicatCrypto\blowfish.h" />
-    <ClInclude Include="NavicatCrypto\NavicatCrypto.hpp" />
-    <ClInclude Include="NavicatCrypto\sha1.h" />
+    <ClInclude Include="NavicatCrypto.hpp" />
     <ClInclude Include="RSACipher.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
