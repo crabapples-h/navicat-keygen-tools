@@ -91,19 +91,29 @@ namespace Helper {
         _tprintf_s(TEXT("%s CODE: 0x%08X\n"), msg, err_code);
     }
 
+    //
+    //  read byte(s) at address `p` as _Type to `out`
+    //  succeed if return true, otherwise return false
+    //
     template<typename _Type>
     static __forceinline bool ProbeForRead(const void* p, void* out) {
         __try {
             *reinterpret_cast<_Type*>(out) = *reinterpret_cast<const _Type*>(p);
             return true;
-        } __except (1) {
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
             return false;
         }
     }
 
-    void PrintMemory(const void* a, const void* b, const void* base) {
-        const uint8_t* start = reinterpret_cast<const uint8_t*>(a);
-        const uint8_t* end = reinterpret_cast<const uint8_t*>(b);
+    //
+    //  Print memory data in [from, to)
+    //  If `base` is not nullptr, print address as offset. Otherwise, as absolute address.
+    //  NOTICE:
+    //      `base` must >= `from`
+    //  
+    void PrintMemory(const void* from, const void* to, const void* base) {
+        const uint8_t* start = reinterpret_cast<const uint8_t*>(from);
+        const uint8_t* end = reinterpret_cast<const uint8_t*>(to);
         const uint8_t* base_ptr = reinterpret_cast<const uint8_t*>(base);
 
         if (start >= end)

@@ -20,7 +20,13 @@ namespace Helper {
     void ErrorReport(LPCTSTR at, UINT line, LPCTSTR msg);
     void ErrorReport(LPCTSTR at, UINT line, LPCTSTR msg, DWORD err_code);
 
-    void PrintMemory(const void* a, const void* b, const void* base);
+    //
+    //  Print memory data in [from, to)
+    //  If `base` is not nullptr, print address as offset. Otherwise, as absolute address.
+    //  NOTICE:
+    //      `base` must >= `from`
+    //  
+    void PrintMemory(const void* from, const void* to, const void* base = nullptr);
 }
 
 #define REPORT_ERROR(msg) Helper::ErrorReport(TEXT(__FUNCTION__), __LINE__, TEXT(msg))
