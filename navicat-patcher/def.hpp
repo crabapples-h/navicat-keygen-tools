@@ -37,6 +37,97 @@ namespace Helper {
 #define PRINT_LPCSTR(msg) printf_s("%s\n", (msg))
 #define PRINT_LPCWSTR(msg) wprintf_s(L"%s\n", (msg))
 
+template<HANDLE __Invalid>
+class HandleGuard {
+private:
+    bool bError;
+    HANDLE& Handle;
+public:
+    HandleGuard(HANDLE& Target) noexcept : bError(true), Handle(Target) {}
+    void ErrorOccurs() noexcept { bError = true; }
+    void NoErrorOccurs() noexcept { bError = false; }
+    ~HandleGuard() noexcept {
+        if (bError && Handle != __Invalid) {
+            CloseHandle(Handle);
+            Handle = __Invalid;
+        }
+    }
+};
+
+class FileMapper {
+private:
+    HANDLE hFile;
+    HANDLE hMap;
+    PVOID pMapView;
+public:
+    FileMapper() noexcept :
+        hFile(INVALID_HANDLE_VALUE),
+        hMap(NULL),
+        pMapView(nullptr) {}
+
+    void Release() noexcept {
+        if (pMapView) {
+            UnmapViewOfFile(pMapView);
+            pMapView = NULL;
+        }
+
+        if (hMap) {
+            CloseHandle(hMap);
+            hMap = NULL;
+        }
+
+        if (hFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hFile);
+            hFile = INVALID_HANDLE_VALUE;
+        }
+    }
+
+    template<typename _Type>
+    _Type* GetView() noexcept {
+        return pMapView;
+    }
+
+    DWORD MapFile(std::Tstring& Name) noexcept {
+        HandleGuard<INVALID_HANDLE_VALUE> hFileGuard(hFile);
+        HandleGuard<NULL> hMapGuard(hMap);
+
+        hFile = CreateFile(Name.c_str(),
+                            GENERIC_READ | GENERIC_WRITE,
+                            NULL,               // exclusive open
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+        if (hFile == INVALID_HANDLE_VALUE)
+            return GetLastError();
+
+        hMap = CreateFileMapping(hFile,
+                                 NULL,
+                                 PAGE_READWRITE,
+                                 0,
+                                 0,
+                                 NULL);
+        if (hMap == NULL)
+            return GetLastError();
+
+        pMapView = MapViewOfFile(hMap,
+                                 FILE_MAP_READ | FILE_MAP_WRITE,
+                                 0,
+                                 0,
+                                 0);
+        if (pMapView == NULL)
+            return GetLastError();
+
+        hFileGuard.NoErrorOccurs();
+        hMapGuard.NoErrorOccurs();
+        return ERROR_SUCCESS;
+    }
+
+    ~FileMapper() {
+        Release();
+    }
+};
+
 namespace Patcher {
 
     // Solution0 will replace the RSA public key stored in main application.
