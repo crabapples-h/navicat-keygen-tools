@@ -28,18 +28,30 @@
    navicat-patcher.exe "C:\Program Files\PremiumSoft\Navicat Premium 12" .\RegPrivateKey.pem
    ```
    
-   __Navicat Premium 12.1.7 简体中文版已通过测试__。下面将是一份样例输出。
+   __Navicat Premium 12.1.11 简体中文版已通过测试__。下面将是一份样例输出。
 
    ```
    MESSAGE: Navicat.exe has been found.
    MESSAGE: libcc.dll has been found.
 
-   MESSAGE: [Solution0] Keyword has been found: offset = +0x0297a6e0.
-   MESSAGE: [Solution1] Keywords[0] has been found: offset = +0x02057530.
-   MESSAGE: [Solution1] Keywords[1] has been found: offset = +0x006c4f89.
-   MESSAGE: [Solution1] Keywords[2] has been found: offset = +0x02057240.
-   MESSAGE: [Solution1] Keywords[3] has been found: offset = +0x006c4f6f.
-   MESSAGE: [Solution1] Keywords[4] has been found: offset = +0x0205722c.
+   MESSAGE: [Solution0] Keyword has been found: offset = +0x029a4b9c.
+   MESSAGE: [Solution1] Keywords[0] has been found: offset = +0x02294960.
+   MESSAGE: [Solution1] Keywords[1] has been found: offset = +0x0074bd29.
+   MESSAGE: [Solution1] Keywords[2] has been found: offset = +0x02294670.
+   MESSAGE: [Solution1] Keywords[3] has been found: offset = +0x0074bd0f.
+   MESSAGE: [Solution1] Keywords[4] has been found: offset = +0x02294664.
+   MESSAGE: [Solution2] Keywords[0] has been found: offset = +0x01643118.
+   MESSAGE: [Solution2] Keywords[1] has been found: offset = +0x016437c1.
+   MESSAGE: [Solution2] Keywords[2] has been found: offset = +0x01643ed0.
+   MESSAGE: [Solution2] Keywords[3] has been found: offset = +0x016445df.
+   MESSAGE: [Solution2] Keywords[4] has been found: offset = +0x01644cee.
+   MESSAGE: [Solution2] Keywords[5] has been found: offset = +0x016453fd.
+   MESSAGE: [Solution2] Keywords[6] has been found: offset = +0x01645b0b.
+   MESSAGE: [Solution2] Keywords[7] has been found: offset = +0x01646217.
+   MESSAGE: [Solution2] Keywords[8] has been found: offset = +0x01646926.
+   MESSAGE: [Solution2] Keywords[9] has been found: offset = +0x01647035.
+   ...
+   ...
 
    Your RSA public key:
    -----BEGIN PUBLIC KEY-----
@@ -59,9 +71,16 @@
    ......
    ......
    ......
+   @+0x016ED490: 83 F0 49 --> 83 F0 49
+   @+0x016EDB9F: 83 F0 44 --> 83 F0 44
+   @+0x016EE2AE: 83 F0 41 --> 83 F0 41
+   @+0x016EE9BD: 83 F0 51 --> 83 F0 51
+   @+0x016EF0CB: 83 F0 41 --> 83 F0 41
+   @+0x016EF7D7: 83 F0 42 --> 83 F0 42
 
    Solution0 has been done successfully.
    Solution1 has been done successfully.
+   Solution2 has been done successfully.
    ```
 
 3. 接下来使用`navicat-keygen.exe`来生成序列号和激活码
