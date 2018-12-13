@@ -13,6 +13,8 @@ namespace Patcher {
 
     uint8_t Solution2::Keywords[KeywordsCount][5];
 
+#if defined(_M_X64)
+
     void Solution2::BuildKeywords() noexcept {
         for (size_t i = 0; i < KeywordsCount; ++i) {
             Keywords[i][0] = 0x83;      // Keywords[i] = asm('xor eax, KeywordsMeta[i]') + 
@@ -44,7 +46,7 @@ namespace Patcher {
             DWORD PossibleRangeStart = 0xffffffff;
             DWORD PossibleRangeEnd;
             for (DWORD i = 0; i < textSection->SizeOfRawData; ++i) {
-                if (memcmp(ptextSectionData + i, Keywords[0], 5) == 0) {
+                if (memcmp(ptextSectionData + i, Keywords[0], sizeof(Keywords[0])) == 0) {
                     Hints[FirstKeywordCounter++] =
                         *reinterpret_cast<uint32_t*>(ptextSectionData + i + sizeof(Keywords[0])) +
                         i + sizeof(Keywords[0]) + sizeof(uint32_t);
@@ -99,6 +101,111 @@ namespace Patcher {
 
         return true;
     }
+
+#else
+
+    void Solution2::BuildKeywords() noexcept {
+        for (size_t i = 0; i < KeywordsCount; ++i) {
+            switch (i % 3) {
+                case 0:
+                    Keywords[i][0] = 0x83;      // Keywords[i] = asm('xor edx, KeywordsMeta[i]') + 
+                    Keywords[i][1] = 0xf2;
+                    Keywords[i][2] = KeywordsMeta[i];
+                    Keywords[i][3] = 0x88;      //               asm_prefix('mov byte ptr ds:xxxxxxxx, dl')
+                    Keywords[i][4] = 0x15;
+                    break;
+                case 1:
+                    Keywords[i][0] = 0x83;      // Keywords[i] = asm('xor eax, KeywordsMeta[i]') + 
+                    Keywords[i][1] = 0xf0;
+                    Keywords[i][2] = KeywordsMeta[i];
+                    Keywords[i][3] = 0xa2;      //               asm_prefix('mov byte ptr ds:xxxxxxxx, al')
+                    break;
+                default:
+                    Keywords[i][0] = 0x83;      // Keywords[i] = asm('xor ecx, KeywordsMeta[i]') + 
+                    Keywords[i][1] = 0xf1;
+                    Keywords[i][2] = KeywordsMeta[i];
+                    Keywords[i][3] = 0x88;      //               asm_prefix('mov byte ptr ds:xxxxxxxx, cl')
+                    Keywords[i][4] = 0x0D;
+                    break;
+            }
+            
+        }
+    }
+
+    bool Solution2::FindPatchOffset() noexcept {
+        PIMAGE_SECTION_HEADER textSection = nullptr;
+        uint8_t* pTargetFileView = pTargetFile->GetView<uint8_t>();
+        uint8_t* ptextSectionData = nullptr;
+        off_t Offsets[KeywordsCount];
+        memset(Offsets, -1, sizeof(Offsets));
+
+        textSection = Helper::ImageSectionHeader(pTargetFileView, ".text");
+        if (textSection == nullptr)
+            return false;
+        ptextSectionData = pTargetFileView + textSection->PointerToRawData;
+
+        BuildKeywords();
+
+        // Find offsets
+        {
+            size_t FirstKeywordCounter = 0;
+            uint32_t Hints[3];
+            DWORD PossibleRangeStart = 0xffffffff;
+            DWORD PossibleRangeEnd;
+            for (DWORD i = 0; i < textSection->SizeOfRawData; ++i) {
+                if (memcmp(ptextSectionData + i, Keywords[0], sizeof(Keywords[0])) == 0) {
+                    Hints[FirstKeywordCounter++] =
+                        *reinterpret_cast<uint32_t*>(ptextSectionData + i + sizeof(Keywords[0]));
+                    if (i < PossibleRangeStart)
+                        PossibleRangeStart = i;
+                }
+            }
+
+            PossibleRangeStart -= 0x1000;
+            PossibleRangeEnd = PossibleRangeStart + 0x100000;
+
+            // Keywords[0] should occur 3 times. 
+            if (FirstKeywordCounter != 3)
+                return false;
+
+            Helper::QuickSort(Hints, 0, _countof(Hints));
+
+            // assert
+            // if not satisfied, refuse to patch
+            if (Hints[2] - Hints[0] != 0x127382BE - 0x12738210)
+                return false;
+
+            for (size_t i = 0; i < KeywordsCount; ++i) {
+                uint8_t CurrentKeyword[9];
+                size_t CurrentKeywordSize = i % 3 == 1 ? 4 : 5;
+                memcpy(CurrentKeyword, Keywords[i], CurrentKeywordSize);
+                *reinterpret_cast<uint32_t*>(CurrentKeyword + CurrentKeywordSize) = Hints[0] + i;
+                CurrentKeywordSize += sizeof(uint32_t);
+
+                for (DWORD j = PossibleRangeStart; j < PossibleRangeEnd; ++j) {
+                    if (memcmp(ptextSectionData + j, CurrentKeyword, CurrentKeywordSize) == 0) {
+                        Offsets[i] = textSection->PointerToRawData + j;
+                        break;
+                    }
+                }
+
+                // if not found, refuse to patch
+                if (Offsets[i] == -1)
+                    return false;
+            }
+        }
+
+        static_assert(sizeof(PatchOffsets) == sizeof(Offsets), "static_assert failure!");
+        memcpy(PatchOffsets, Offsets, sizeof(PatchOffsets));
+
+        for (size_t i = 0; i < KeywordsCount; ++i)
+            _tprintf_s(TEXT("MESSAGE: [Solution2] Keywords[%zu] has been found: offset = +0x%08lx.\n"),
+                       i, PatchOffsets[i]);
+
+        return true;
+    }
+
+#endif
 
     bool Solution2::MakePatch(RSACipher* cipher) const {
         std::string RSAPublicKeyPEM;
