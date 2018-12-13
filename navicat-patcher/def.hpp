@@ -21,12 +21,14 @@ namespace Helper {
     void ErrorReport(LPCTSTR at, UINT line, LPCTSTR msg, DWORD err_code);
 
     //
-    //  Print memory data in [from, to)
+    //  Print memory data in [from, to) at least
     //  If `base` is not nullptr, print address as offset. Otherwise, as absolute address.
     //  NOTICE:
     //      `base` must >= `from`
     //  
     void PrintMemory(const void* from, const void* to, const void* base = nullptr);
+
+    PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName);
 }
 
 #define REPORT_ERROR(msg) Helper::ErrorReport(TEXT(__FUNCTION__), __LINE__, TEXT(msg))
@@ -83,8 +85,8 @@ public:
     }
 
     template<typename _Type>
-    _Type* GetView() noexcept {
-        return pMapView;
+    _Type* GetView() const noexcept {
+        return reinterpret_cast<_Type*>(pMapView);
     }
 
     DWORD MapFile(std::Tstring& Name) noexcept {
@@ -93,7 +95,7 @@ public:
 
         hFile = CreateFile(Name.c_str(),
                             GENERIC_READ | GENERIC_WRITE,
-                            NULL,               // exclusive open
+                            FILE_SHARE_READ,    // share read so that we can copy
                             NULL,
                             OPEN_EXISTING,
                             FILE_ATTRIBUTE_NORMAL,
@@ -130,138 +132,71 @@ public:
 
 namespace Patcher {
 
+    class Solution {
+    public:
+        virtual void SetFile(FileMapper* pFile) = 0;
+        virtual bool CheckKey(RSACipher* cipher) const = 0;
+        virtual bool FindPatchOffset() = 0;
+        virtual bool MakePatch(RSACipher* cipher) const = 0;
+        virtual ~Solution() {}
+    };
+
     // Solution0 will replace the RSA public key stored in main application.
-    class Solution0 {
+    class Solution0 : public Solution {
     private:
         static const char Keyword[461];
         static constexpr int KeywordLength = 460;
 
-        std::Tstring InstallationPath;
-        std::Tstring MainAppName;
-        HANDLE MainAppHandle;
-        HANDLE MainAppMappingHandle;
-        PVOID MainAppMappingView;
+        FileMapper* pTargetFile;
         off_t PatchOffset;
     public:
 
-        Solution0() : InstallationPath(),
-                      MainAppName(),
-                      MainAppHandle(INVALID_HANDLE_VALUE),
-                      MainAppMappingHandle(NULL),
-                      MainAppMappingView(nullptr),
-                      PatchOffset(-1) {}
+        Solution0() noexcept : 
+            pTargetFile(nullptr),
+            PatchOffset(-1) {}
 
-        BOOL SetPath(const std::Tstring& Path);
+        virtual void SetFile(FileMapper* pMainApp) noexcept override {
+            pTargetFile = pMainApp;
+        }
 
-        // Solution0 does not have any requirements for RSA-2048 key
-        BOOL CheckKey(RSACipher* cipher) const;
+        // Solution0 does not have any requirements for an RSA-2048 key
+        virtual bool CheckKey(RSACipher* cipher) const noexcept override {
+            return true;
+        }
 
-        // Return error code
-        // It may return 
-        //     ERROR_SUCCESS        (target has been set successfully)
-        //     ERROR_FILE_NOT_FOUND (try another name)
-        //     ERROR_ACCESS_DENIED  (you need Administrator privilege)
-        //     ...
-        DWORD TryFile(const std::Tstring& MainAppName);
+        // Return true if found, other return false
+        virtual bool FindPatchOffset() noexcept override;
 
-        // Return error code
-        // It may return
-        //     ERROR_SUCCESS        (target has been mapped successfully)
-        //     ...
-        DWORD MapFile();
-
-        // Return TRUE if found, other return FALSE
-        BOOL FindPatchOffset();
-
-        // Return error code
-        // It may return 
-        //     ERROR_SUCCESS        (file has been backed up successfully)
-        //     ERROR_FILE_EXISTS    (you should remove backup file first)
-        //     ERROR_ACCESS_DENIED  (you need Administrator privilege)
-        //     ...
-        DWORD BackupFile();
-
-        // Make a patch based on RSA private key
-        // Return TRUE if success, otherwise return FALSE
-        BOOL MakePatch(RSACipher* cipher);
-
-        // Return error code
-        // Return ERROR_SUCCESS if success
-        // DWORD GetMainAppVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer);
-
-        const std::Tstring& GetMainAppName();
-
-        // Close handle returned by CreateFile with a implicit call towards ReleaseMap
-        void ReleaseFile();
-
-        // Unmap view returned by MapViewOfFile and 
-        // close handle returned by CreateFileMapping
-        void ReleaseMap();
-
-        ~Solution0();
+        // Make a patch based on an RSA private key given
+        // Return true if success, otherwise return false
+        virtual bool MakePatch(RSACipher* cipher) const override;
     };
 
     // Solution0 will replace the RSA public key stored in libcc.dll
-    class Solution1 {
+    class Solution1 : public Solution {
     private:
         static const char* Keywords[5];
         static const int KeywordsLength[5];
 
-        std::Tstring InstallationPath;
-        std::Tstring LibccName;
-        HANDLE LibccHandle;
-        HANDLE LibccMappingHandle;
-        PVOID LibccMappingView;
+        FileMapper* pTargetFile;
         off_t PatchOffsets[5];
     public:
-        Solution1() : InstallationPath(),
-                      LibccName(),
-                      LibccHandle(INVALID_HANDLE_VALUE),
-                      LibccMappingHandle(NULL),
-                      LibccMappingView(nullptr),
-                      PatchOffsets{-1, -1, -1, -1, -1} {}
+        Solution1() :
+            pTargetFile(nullptr),
+            PatchOffsets{ -1, -1, -1, -1, -1 } {}
 
-        BOOL SetPath(const std::Tstring& Path);
+        virtual void SetFile(FileMapper* pLibccFile) noexcept override {
+            pTargetFile = pLibccFile;
+        }
 
-        // Solution0 does not have any requirements for RSA-2048 key
-        BOOL CheckKey(RSACipher* cipher) const;
+        // Solution1 has some requirements for an RSA-2048 key
+        virtual bool CheckKey(RSACipher* cipher) const noexcept override;
 
-        // Return error code
-        // It may return 
-        //     ERROR_SUCCESS        (target has been set successfully)
-        //     ERROR_FILE_NOT_FOUND (try another name)
-        //     ERROR_ACCESS_DENIED  (you need Administrator privilege)
-        //     ...
-        DWORD TryFile(const std::Tstring& MainAppName);
+        // Return true if found, otherwise return false
+        virtual bool FindPatchOffset() noexcept override;
 
-        // Return error code
-        // It may return
-        //     ERROR_SUCCESS        (target has been mapped successfully)
-        //     ...
-        DWORD MapFile();
-
-        // Return TRUE if found, other return FALSE
-        BOOL FindPatchOffset();
-
-        // Return error code
-        // It may return 
-        //     ERROR_SUCCESS        (file has been backed up successfully)
-        //     ERROR_FILE_EXISTS    (you should remove backup file first)
-        //     ERROR_ACCESS_DENIED  (you need Administrator privilege)
-        //     ...
-        DWORD BackupFile();
-
-        // Make a patch based on RSA private key
-        // Return TRUE if success, otherwise return FALSE
-        BOOL MakePatch(RSACipher* cipher);
-
-        // Close handle returned by CreateFile with a implicit call towards ReleaseMap
-        void ReleaseFile();
-
-        // Unmap view returned by MapViewOfFile and 
-        // close handle returned by CreateFileMapping
-        void ReleaseMap();
-
-        ~Solution1();
+        // Make a patch based on an RSA private key given
+        // Return true if success, otherwise return false
+        virtual bool MakePatch(RSACipher* cipher) const override;
     };
 }

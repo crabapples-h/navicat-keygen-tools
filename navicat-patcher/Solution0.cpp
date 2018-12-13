@@ -19,105 +19,22 @@ namespace Patcher {
         "awIDAQAB\r\n"
         "-----END PUBLIC KEY-----\r\n";
 
-    BOOL Solution0::SetPath(const std::Tstring& Path) {
-        DWORD Attr;
+    bool Solution0::FindPatchOffset() noexcept {
+        bool bFound = false;
 
-        Attr = GetFileAttributes(Path.c_str());
-        if (Attr == INVALID_FILE_ATTRIBUTES) {
-            if (GetLastError() == ERROR_INVALID_NAME || GetLastError() == ERROR_FILE_NOT_FOUND) 
-                REPORT_ERROR("ERROR: Invalid path. Are you sure the path you specified is correct?");
-            else 
-                REPORT_ERROR_WITH_CODE("ERROR: GetFileAttributes failed.", GetLastError());
-            return FALSE;
-        }
-
-        if ((Attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            REPORT_ERROR("ERROR: Path is not a directory.");
-            return FALSE;
-        }
-
-        ReleaseFile();
-
-        InstallationPath = Path;
-        if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
-            InstallationPath.push_back(TEXT('/'));  // for Linux compatible
-
-        return TRUE;
-    }
-
-    // Solution0 does not have any requirements for RSA-2048 key
-    BOOL Solution0::CheckKey(RSACipher* cipher) const {
-        return TRUE;
-    }
-
-    DWORD Solution0::TryFile(const std::Tstring& Name) {
-        std::Tstring MainAppFullName = InstallationPath + Name;
-        HANDLE hFile;
+        PIMAGE_SECTION_HEADER pResourceSection =
+            Helper::ImageSectionHeader(pTargetFile->GetView<uint8_t>(), ".rsrc");
         
-        hFile = CreateFile(MainAppFullName.c_str(),
-                           GENERIC_READ | GENERIC_WRITE, 
-                           FILE_SHARE_READ,
-                           nullptr,                         // default SA
-                           OPEN_EXISTING, 
-                           FILE_ATTRIBUTE_NORMAL, 
-                           NULL);
-        if (hFile == INVALID_HANDLE_VALUE) 
-            return GetLastError();
-
-        ReleaseFile();
-
-        MainAppHandle = hFile;
-        MainAppName = Name;
-        return ERROR_SUCCESS;
-    }
-
-    DWORD Solution0::MapFile() {
-        DWORD dwLastError = ERROR_SUCCESS;
-        HANDLE hMapping = NULL;
-        PVOID lpMapView = nullptr;
-
-        hMapping = CreateFileMapping(MainAppHandle,
-                                     nullptr,           // default SA
-                                     PAGE_READWRITE,
-                                     0, 0,              // map all
-                                     nullptr);          // we don't need a name
-        if (hMapping == NULL) {
-            dwLastError = GetLastError();
-            goto ON_Solution0_MapFile_ERROR;
-        }
-
-        lpMapView = MapViewOfFile(hMapping,
-                                  FILE_MAP_READ | FILE_MAP_WRITE,
-                                  0, 0, 0);             // map all
-        if (lpMapView == nullptr) {
-            dwLastError = GetLastError();
-            goto ON_Solution0_MapFile_ERROR;
-        }
-
-        ReleaseMap();
-
-        MainAppMappingView = lpMapView;
-        lpMapView = nullptr;
-        MainAppMappingHandle = hMapping;
-        hMapping = NULL;
-
-    ON_Solution0_MapFile_ERROR:
-        if (hMapping)
-            CloseHandle(hMapping);
-        return dwLastError;
-    }
-
-    BOOL Solution0::FindPatchOffset() {
-        BOOL bFound = FALSE;
-        DWORD dwFileSize = 0;
-
-        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(MainAppMappingView);
-        dwFileSize = GetFileSize(MainAppHandle, nullptr);
+        if (pResourceSection == nullptr)
+            return false;
         
-        for (DWORD i = 0; i < dwFileSize; ++i) {
-            if (memcmp(lpFileContent + i, Keyword, KeywordLength) == 0) {
-                PatchOffset = i;
-                bFound = TRUE;
+        uint8_t* pResourceSectionData =
+            pTargetFile->GetView<uint8_t>() + pResourceSection->PointerToRawData;
+        
+        for (DWORD i = 0; i < pResourceSection->SizeOfRawData; ++i) {
+            if (memcmp(pResourceSectionData + i, Keyword, KeywordLength) == 0) {
+                PatchOffset = pResourceSection->PointerToRawData + i;
+                bFound = true;
                 break;
             }
         }
@@ -127,25 +44,15 @@ namespace Patcher {
         return bFound;
     }
 
-    DWORD Solution0::BackupFile() {
-        std::Tstring TargetFileFullName = InstallationPath + MainAppName;
-        std::Tstring BackupFileFullName = InstallationPath + MainAppName + TEXT(".backup");
-        
-        if (!CopyFile(TargetFileFullName.c_str(), BackupFileFullName.c_str(), TRUE))
-            return GetLastError();
-        else
-            return ERROR_SUCCESS;
-    }
-
-    BOOL Solution0::MakePatch(RSACipher* cipher) {
-        BOOL bSuccess = FALSE;
-        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(MainAppMappingView);
+    bool Solution0::MakePatch(RSACipher* cipher) const {
+        uint8_t* lpTargetFileView = pTargetFile->GetView<uint8_t>();
         std::string RSAPublicKeyPEM;
 
-        RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+        RSAPublicKeyPEM = 
+            cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
         if (RSAPublicKeyPEM.empty()) {
             REPORT_ERROR("ERROR: cipher->ExportKeyString failed.");
-            goto ON_Do_ERROR;
+            return false;
         }
 
         // lambda function, replace '\n' to '\r\n'
@@ -162,25 +69,26 @@ namespace Patcher {
 
         if (RSAPublicKeyPEM.length() != KeywordLength) {
             REPORT_ERROR("ERROR: Public key length does not match.");
-            goto ON_Do_ERROR;
+            return false;
         }
 
-        _tprintf_s(TEXT("@%s+0x%08X\nPrevious:\n"), MainAppName.c_str(), PatchOffset);
-        Helper::PrintMemory(lpFileContent + PatchOffset,
-                            lpFileContent + PatchOffset + KeywordLength, 
-                            lpFileContent);
+        PRINT_MESSAGE("//");
+        PRINT_MESSAGE("// Begin Solution0");
+        PRINT_MESSAGE("//");
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffset);
+        Helper::PrintMemory(lpTargetFileView + PatchOffset,
+                            lpTargetFileView + PatchOffset + KeywordLength, 
+                            lpTargetFileView);
 
-        memcpy(lpFileContent + PatchOffset, RSAPublicKeyPEM.c_str(), KeywordLength);
+        memcpy(lpTargetFileView + PatchOffset, RSAPublicKeyPEM.c_str(), KeywordLength);
 
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffset,
-                            lpFileContent + PatchOffset + KeywordLength,
-                            lpFileContent);
+        Helper::PrintMemory(lpTargetFileView + PatchOffset,
+                            lpTargetFileView + PatchOffset + KeywordLength,
+                            lpTargetFileView);
         PRINT_MESSAGE("");
-
-        bSuccess = TRUE;
-    ON_Do_ERROR:
-        return bSuccess;
+        
+        return true;
     }
 
 //     DWORD Solution0::GetMainAppVersion(LPDWORD lpMajorVer, LPDWORD lpMinorVer) {
@@ -230,33 +138,5 @@ namespace Patcher {
 //             HeapFree(GetProcessHeap(), NULL, lpData);
 //         return bSuccess;
 //     }
-
-    const std::Tstring& Solution0::GetMainAppName() {
-        return MainAppName;
-    }
-
-    void Solution0::ReleaseFile() {
-        ReleaseMap();
-
-        if (MainAppHandle != INVALID_HANDLE_VALUE && MainAppHandle) {
-            CloseHandle(MainAppHandle);
-            MainAppHandle = INVALID_HANDLE_VALUE;
-        }
-    }
-
-    void Solution0::ReleaseMap() {
-        if (MainAppMappingView) {
-            UnmapViewOfFile(MainAppMappingView);
-            MainAppMappingView = nullptr;
-        }
-
-        if (MainAppMappingHandle) {
-            CloseHandle(MainAppMappingHandle);
-            MainAppMappingHandle = NULL;
-        }
-    }
-
-    Solution0::~Solution0() {
-        ReleaseFile();
-    }
+    
 }

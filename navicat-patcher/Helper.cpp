@@ -106,7 +106,7 @@ namespace Helper {
     }
 
     //
-    //  Print memory data in [from, to)
+    //  Print memory data in [from, to) at least
     //  If `base` is not nullptr, print address as offset. Otherwise, as absolute address.
     //  NOTICE:
     //      `base` must >= `from`
@@ -160,4 +160,26 @@ namespace Helper {
         }
     }
 
+    PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName) {
+        PIMAGE_DOS_HEADER pFileHeader = NULL;
+        PIMAGE_NT_HEADERS pNtHeader = NULL;
+        IMAGE_SECTION_HEADER* pSectionHeaders = NULL;
+
+        pFileHeader = (IMAGE_DOS_HEADER*)lpBase;
+        if (pFileHeader->e_magic != IMAGE_DOS_SIGNATURE)
+            return NULL;
+
+        pNtHeader = (IMAGE_NT_HEADERS*)((BYTE*)lpBase + pFileHeader->e_lfanew);
+        if (pNtHeader->Signature != IMAGE_NT_SIGNATURE)
+            return NULL;
+
+        pSectionHeaders = (IMAGE_SECTION_HEADER*)((BYTE*)pNtHeader +
+                                                  offsetof(IMAGE_NT_HEADERS, OptionalHeader) +
+                                                  pNtHeader->FileHeader.SizeOfOptionalHeader);
+        for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; ++i)
+            if (_stricmp((const char*)pSectionHeaders[i].Name, lpSectionName) == 0)
+                return pSectionHeaders + i;
+
+        return NULL;
+    }
 }

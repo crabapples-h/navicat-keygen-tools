@@ -1,32 +1,5 @@
 #include "def.hpp"
 
-namespace Helper {
-    std::string EncryptPublicKey(const std::string& public_key);
-
-    static PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName) {
-        IMAGE_DOS_HEADER* pFileHeader = NULL;
-        IMAGE_NT_HEADERS* pNtHeader = NULL;
-        IMAGE_SECTION_HEADER* pSectionHeaders = NULL;
-
-        pFileHeader = (IMAGE_DOS_HEADER*)lpBase;
-        if (pFileHeader->e_magic != IMAGE_DOS_SIGNATURE)
-            return NULL;
-
-        pNtHeader = (IMAGE_NT_HEADERS*)((BYTE*)lpBase + pFileHeader->e_lfanew);
-        if (pNtHeader->Signature != IMAGE_NT_SIGNATURE)
-            return NULL;
-
-        pSectionHeaders = (IMAGE_SECTION_HEADER*)((BYTE*)pNtHeader +
-                                                  offsetof(IMAGE_NT_HEADERS, OptionalHeader) +
-                                                  pNtHeader->FileHeader.SizeOfOptionalHeader);
-        for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; ++i)
-            if (_stricmp((const char*)pSectionHeaders[i].Name, lpSectionName) == 0)
-                return pSectionHeaders + i;
-
-        return NULL;
-    }
-}
-
 namespace Patcher {
 
     const char* Solution1::Keywords[5] = {
@@ -76,41 +49,15 @@ namespace Patcher {
         5
     };
 
-    BOOL Solution1::SetPath(const std::Tstring& Path) {
-        DWORD Attr;
-
-        Attr = GetFileAttributes(Path.c_str());
-        if (Attr == INVALID_FILE_ATTRIBUTES) {
-            if (GetLastError() == ERROR_INVALID_NAME || GetLastError() == ERROR_FILE_NOT_FOUND)
-                REPORT_ERROR("ERROR: Invalid path. Are you sure the path you specified is correct?");
-            else
-                REPORT_ERROR_WITH_CODE("ERROR: GetFileAttributes failed.", GetLastError());
-            return FALSE;
-        }
-
-        if ((Attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-            REPORT_ERROR("ERROR: Path is not a directory.");
-            return FALSE;
-        }
-
-        ReleaseFile();
-
-        InstallationPath = Path;
-        if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
-            InstallationPath.push_back(TEXT('/'));  // for Linux compatible
-
-        return TRUE;
-    }
-
-    BOOL Solution1::CheckKey(RSACipher* cipher) const {
+    bool Solution1::CheckKey(RSACipher* cipher) const noexcept {
         BOOL bOk = FALSE;
         std::string RSAPublicKeyPEM;
 
-        RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+        RSAPublicKeyPEM = 
+            cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
         if (RSAPublicKeyPEM.empty()) {
-            _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-            _tprintf_s(TEXT("ERROR: cipher->ExportKeyString failed.\n"));
-            return FALSE;
+            REPORT_ERROR("ERROR: cipher->ExportKeyString failed.");
+            return false;
         }
 
         [](std::string& str, const std::string& OldSub, const std::string& NewSub) {
@@ -127,103 +74,46 @@ namespace Patcher {
         std::string encrypted_pem_text = Helper::EncryptPublicKey(RSAPublicKeyPEM);
 
         if (encrypted_pem_text[160] > '9' || encrypted_pem_text[160] < '1') 
-            return FALSE;
+            return false;
 
         for (int i = 1; i < 8; ++i)
             if (encrypted_pem_text[160 + i] > '9' || encrypted_pem_text[160 + i] < '0') 
-                return FALSE;
+                return false;
 
         if (encrypted_pem_text[910] > '9' || encrypted_pem_text[910] < '1') 
-            return FALSE;
+            return false;
 
         for (int i = 1; i < 5; ++i)
             if (encrypted_pem_text[910 + i] > '9' || encrypted_pem_text[910 + i] < '0')
-                return FALSE;
+                return false;
 
-        return TRUE;
+        return true;
     }
 
-    DWORD Solution1::TryFile(const std::Tstring& Name) {
-        std::Tstring MainAppFullName = InstallationPath + Name;
-        HANDLE hFile;
+    bool Solution1::FindPatchOffset() noexcept {
+        PIMAGE_SECTION_HEADER textSection = nullptr;
+        PIMAGE_SECTION_HEADER rdataSection = nullptr;
 
-        hFile = CreateFile(MainAppFullName.c_str(),
-                           GENERIC_READ | GENERIC_WRITE,
-                           FILE_SHARE_READ,
-                           nullptr,                         // default SA
-                           OPEN_EXISTING,
-                           FILE_ATTRIBUTE_NORMAL,
-                           NULL);
-        if (hFile == INVALID_HANDLE_VALUE)
-            return GetLastError();
-
-        ReleaseFile();
-
-        LibccHandle = hFile;
-        LibccName = Name;
-        return ERROR_SUCCESS;
-    }
-
-    DWORD Solution1::MapFile() {
-        DWORD dwLastError = ERROR_SUCCESS;
-        HANDLE hMapping = NULL;
-        PVOID lpMapView = nullptr;
-
-        hMapping = CreateFileMapping(LibccHandle,
-                                     nullptr,           // default SA
-                                     PAGE_READWRITE,
-                                     0, 0,              // map all
-                                     nullptr);          // we don't need a name
-        if (hMapping == NULL) {
-            dwLastError = GetLastError();
-            goto ON_Solution0_MapFile_ERROR;
-        }
-
-        lpMapView = MapViewOfFile(hMapping,
-                                  FILE_MAP_READ | FILE_MAP_WRITE,
-                                  0, 0, 0);             // map all
-        if (lpMapView == nullptr) {
-            dwLastError = GetLastError();
-            goto ON_Solution0_MapFile_ERROR;
-        }
-
-        ReleaseMap();
-
-        LibccMappingView = lpMapView;
-        lpMapView = nullptr;
-        LibccMappingHandle = hMapping;
-        hMapping = NULL;
-
-    ON_Solution0_MapFile_ERROR:
-        if (hMapping)
-            CloseHandle(hMapping);
-        return dwLastError;
-    }
-
-    BOOL Solution1::FindPatchOffset() {
-        IMAGE_SECTION_HEADER* textSection = nullptr;
-        IMAGE_SECTION_HEADER* rdataSection = nullptr;
-
-        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(LibccMappingView);
+        uint8_t* pTargetFileView = pTargetFile->GetView<uint8_t>();
         off_t Offsets[5] = { -1, -1, -1, -1, -1 };
 
-        textSection = Helper::ImageSectionHeader(lpFileContent, ".text");
+        textSection = Helper::ImageSectionHeader(pTargetFileView, ".text");
         if (textSection == nullptr) {
             // REPORT_ERROR("ERROR: Cannot find .text section.");
-            return FALSE;
+            return false;
         }
 
-        rdataSection = Helper::ImageSectionHeader(lpFileContent, ".rdata");
+        rdataSection = Helper::ImageSectionHeader(pTargetFileView, ".rdata");
         if (textSection == nullptr) {
             // REPORT_ERROR("ERROR: Cannot find .rdata section.");
-            return FALSE;
+            return false;
         }
 
         // -------------------------
         // try to search Keywords[0]
         // -------------------------
         for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
-            if (memcmp(lpFileContent + rdataSection->PointerToRawData + i, Keywords[0], KeywordsLength[0]) == 0) {
+            if (memcmp(pTargetFileView + rdataSection->PointerToRawData + i, Keywords[0], KeywordsLength[0]) == 0) {
                 Offsets[0] = rdataSection->PointerToRawData + i;
                 break;
             }
@@ -231,14 +121,14 @@ namespace Patcher {
 
         if (Offsets[0] == -1) {
             // REPORT_ERROR("ERROR: Cannot find Keywords[0].");
-            return FALSE;
+            return false;
         }
 
         // -------------------------
         // try to search Keywords[2]
         // -------------------------
         for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
-            if (memcmp(lpFileContent + rdataSection->PointerToRawData + i, Keywords[2], KeywordsLength[2]) == 0) {
+            if (memcmp(pTargetFileView + rdataSection->PointerToRawData + i, Keywords[2], KeywordsLength[2]) == 0) {
                 Offsets[2] = rdataSection->PointerToRawData + i;
                 break;
             }
@@ -246,14 +136,14 @@ namespace Patcher {
 
         if (Offsets[2] == -1) {
             // REPORT_ERROR("ERROR: Cannot find Keywords[2].");
-            return FALSE;
+            return false;
         }
 
         // -------------------------
         // try to search Keywords[4]
         // -------------------------
         for (DWORD i = 0; i < rdataSection->SizeOfRawData; ++i) {
-            if (memcmp((uint8_t*)lpFileContent + rdataSection->PointerToRawData + i, Keywords[4], KeywordsLength[4]) == 0) {
+            if (memcmp((uint8_t*)pTargetFileView + rdataSection->PointerToRawData + i, Keywords[4], KeywordsLength[4]) == 0) {
                 Offsets[4] = rdataSection->PointerToRawData + i;
                 break;
             }
@@ -261,18 +151,18 @@ namespace Patcher {
 
         if (Offsets[4] == -1) {
             // REPORT_ERROR("ERROR: Cannot find Keywords[4].");
-            return FALSE;
+            return false;
         }
 
         // -------------------------
         // try to search Keywords[1] and Keywords[3]
         // -------------------------
         for (DWORD i = 0; i < textSection->SizeOfRawData; ++i) {
-            if (memcmp(lpFileContent + textSection->PointerToRawData + i, Keywords[1], KeywordsLength[1]) == 0) {
+            if (memcmp(pTargetFileView + textSection->PointerToRawData + i, Keywords[1], KeywordsLength[1]) == 0) {
 
                 // Keywords[3] must be close to Keywords[1]
                 for (DWORD j = i - 64; j < i + 64; ++j) {
-                    if (memcmp(lpFileContent + textSection->PointerToRawData + j, Keywords[3], KeywordsLength[3]) == 0) {
+                    if (memcmp(pTargetFileView + textSection->PointerToRawData + j, Keywords[3], KeywordsLength[3]) == 0) {
                         Offsets[1] = textSection->PointerToRawData + i;
                         Offsets[3] = textSection->PointerToRawData + j;
                         break;
@@ -288,7 +178,7 @@ namespace Patcher {
 
         if (Offsets[1] == -1) {
             // REPORT_ERROR("ERROR: Cannot find Keywords[1] and Keywords[3].");
-            return FALSE;
+            return false;
         }
         
         PatchOffsets[0] = Offsets[0];
@@ -302,23 +192,13 @@ namespace Patcher {
         _tprintf_s(TEXT("MESSAGE: [Solution1] Keywords[3] has been found: offset = +0x%08lx.\n"), PatchOffsets[3]);
         _tprintf_s(TEXT("MESSAGE: [Solution1] Keywords[4] has been found: offset = +0x%08lx.\n"), PatchOffsets[4]);
 
-        return TRUE;
+        return true;
     }
 
-    DWORD Solution1::BackupFile() {
-        std::Tstring TargetFileFullName = InstallationPath + LibccName;
-        std::Tstring BackupFileFullName = InstallationPath + LibccName + TEXT(".backup");
-
-        if (!CopyFile(TargetFileFullName.c_str(), BackupFileFullName.c_str(), TRUE))
-            return GetLastError();
-        else
-            return ERROR_SUCCESS;
-    }
-
-    BOOL Solution1::MakePatch(RSACipher* cipher) {
+    bool Solution1::MakePatch(RSACipher* cipher) const {
         std::string RSAPublicKeyPEM;
         std::string encrypted_pem_pubkey;
-        uint8_t* lpFileContent = reinterpret_cast<uint8_t*>(LibccMappingView);
+        uint8_t* pTargetFileView = pTargetFile->GetView<uint8_t>();
 
         RSAPublicKeyPEM = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
         if (RSAPublicKeyPEM.empty()) {
@@ -351,102 +231,81 @@ namespace Patcher {
         uint32_t imm1 = std::stoul(encrypted_pem_pubkey1.c_str());
         uint32_t imm3 = std::stoul(encrypted_pem_pubkey3.c_str());
 
+        PRINT_MESSAGE("//");
+        PRINT_MESSAGE("// Begin Solution1");
+        PRINT_MESSAGE("//");
 
         // ----------------------------------
         //     process PatchOffsets[0]
         // ----------------------------------
-        _tprintf_s(TEXT("@libcc.dll+0x%08X\nPrevious:\n"), PatchOffsets[0]);
-        Helper::PrintMemory(lpFileContent + PatchOffsets[0],
-                            lpFileContent + PatchOffsets[0] + KeywordsLength[0],
-                            lpFileContent);
-        memcpy(lpFileContent + PatchOffsets[0], encrypted_pem_pubkey0.c_str(), KeywordsLength[0]);
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffsets[0]);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[0],
+                            pTargetFileView + PatchOffsets[0] + KeywordsLength[0],
+                            pTargetFileView);
+        memcpy(pTargetFileView + PatchOffsets[0], encrypted_pem_pubkey0.c_str(), KeywordsLength[0]);
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffsets[0],
-                            lpFileContent + PatchOffsets[0] + KeywordsLength[0],
-                            lpFileContent);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[0],
+                            pTargetFileView + PatchOffsets[0] + KeywordsLength[0],
+                            pTargetFileView);
         PRINT_MESSAGE("");
 
         // ----------------------------------
         //     process PatchOffsets[1]
         // ----------------------------------
-        _tprintf_s(TEXT("@libcc.dll+0x%08X\nPrevious:\n"), PatchOffsets[1]);
-        Helper::PrintMemory(lpFileContent + PatchOffsets[1],
-                            lpFileContent + PatchOffsets[1] + KeywordsLength[1],
-                            lpFileContent);
-        memcpy(lpFileContent + PatchOffsets[1], &imm1, KeywordsLength[1]);
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffsets[1]);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[1],
+                            pTargetFileView + PatchOffsets[1] + KeywordsLength[1],
+                            pTargetFileView);
+        memcpy(pTargetFileView + PatchOffsets[1], &imm1, KeywordsLength[1]);
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffsets[1],
-                            lpFileContent + PatchOffsets[1] + KeywordsLength[1],
-                            lpFileContent);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[1],
+                            pTargetFileView + PatchOffsets[1] + KeywordsLength[1],
+                            pTargetFileView);
         PRINT_MESSAGE("");
 
         // ----------------------------------
         //     process PatchOffsets[2]
         // ----------------------------------
-        _tprintf_s(TEXT("@libcc.dll+0x%08X\nPrevious:\n"), PatchOffsets[2]);
-        Helper::PrintMemory(lpFileContent + PatchOffsets[2],
-                            lpFileContent + PatchOffsets[2] + KeywordsLength[2],
-                            lpFileContent);
-        memcpy(lpFileContent + PatchOffsets[2], encrypted_pem_pubkey2.c_str(), KeywordsLength[2]);
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffsets[2]);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[2],
+                            pTargetFileView + PatchOffsets[2] + KeywordsLength[2],
+                            pTargetFileView);
+        memcpy(pTargetFileView + PatchOffsets[2], encrypted_pem_pubkey2.c_str(), KeywordsLength[2]);
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffsets[2],
-                            lpFileContent + PatchOffsets[2] + KeywordsLength[2],
-                            lpFileContent);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[2],
+                            pTargetFileView + PatchOffsets[2] + KeywordsLength[2],
+                            pTargetFileView);
         PRINT_MESSAGE("");
 
         // ----------------------------------
         //     process PatchOffsets[3]
         // ----------------------------------
-        _tprintf_s(TEXT("@libcc.dll+0x%08X\nPrevious:\n"), PatchOffsets[3]);
-        Helper::PrintMemory(lpFileContent + PatchOffsets[3],
-                            lpFileContent + PatchOffsets[3] + KeywordsLength[3],
-                            lpFileContent);
-        memcpy(lpFileContent + PatchOffsets[3], &imm3, KeywordsLength[3]);
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffsets[3]);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[3],
+                            pTargetFileView + PatchOffsets[3] + KeywordsLength[3],
+                            pTargetFileView);
+        memcpy(pTargetFileView + PatchOffsets[3], &imm3, KeywordsLength[3]);
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffsets[3],
-                            lpFileContent + PatchOffsets[3] + KeywordsLength[3],
-                            lpFileContent);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[3],
+                            pTargetFileView + PatchOffsets[3] + KeywordsLength[3],
+                            pTargetFileView);
         PRINT_MESSAGE("");
 
         // ----------------------------------
         //     process PatchOffsets[4]
         // ----------------------------------
-        _tprintf_s(TEXT("@libcc.dll+0x%08X\nPrevious:\n"), PatchOffsets[4]);
-        Helper::PrintMemory(lpFileContent + PatchOffsets[4],
-                            lpFileContent + PatchOffsets[4] + KeywordsLength[4],
-                            lpFileContent);
-        memcpy(lpFileContent + PatchOffsets[4], encrypted_pem_pubkey4.c_str(), KeywordsLength[4]);
+        _tprintf_s(TEXT("@+0x%08X\nPrevious:\n"), PatchOffsets[4]);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[4],
+                            pTargetFileView + PatchOffsets[4] + KeywordsLength[4],
+                            pTargetFileView);
+        memcpy(pTargetFileView + PatchOffsets[4], encrypted_pem_pubkey4.c_str(), KeywordsLength[4]);
         PRINT_MESSAGE("After:");
-        Helper::PrintMemory(lpFileContent + PatchOffsets[4],
-                            lpFileContent + PatchOffsets[4] + KeywordsLength[4],
-                            lpFileContent);
+        Helper::PrintMemory(pTargetFileView + PatchOffsets[4],
+                            pTargetFileView + PatchOffsets[4] + KeywordsLength[4],
+                            pTargetFileView);
         PRINT_MESSAGE("");
         return TRUE;
     }
 
-    void Solution1::ReleaseFile() {
-        ReleaseMap();
-
-        if (LibccHandle != INVALID_HANDLE_VALUE && LibccHandle) {
-            CloseHandle(LibccHandle);
-            LibccHandle = INVALID_HANDLE_VALUE;
-        }
-    }
-
-    void Solution1::ReleaseMap() {
-        if (LibccMappingView) {
-            UnmapViewOfFile(LibccMappingView);
-            LibccMappingView = nullptr;
-        }
-
-        if (LibccMappingHandle) {
-            CloseHandle(LibccMappingHandle);
-            LibccMappingHandle = NULL;
-        }
-    }
-
-    Solution1::~Solution1() {
-        ReleaseFile();
-    }
-
 }
+

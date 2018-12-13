@@ -5,7 +5,44 @@ static void help() {
     PRINT_MESSAGE("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]");
 }
 
-static BOOL LoadKey(RSACipher* cipher, LPTSTR filename, Patcher::Solution0* pSolution0, Patcher::Solution1* pSolution1) {
+std::Tstring InstallationPath;
+std::Tstring MainAppName;
+std::Tstring LibccName = TEXT("libcc.dll");
+
+static BOOL SetPath(const std::Tstring& Path) {
+    DWORD Attr;
+
+    Attr = GetFileAttributes(Path.c_str());
+    if (Attr == INVALID_FILE_ATTRIBUTES) {
+        if (GetLastError() == ERROR_INVALID_NAME || GetLastError() == ERROR_FILE_NOT_FOUND)
+            REPORT_ERROR("ERROR: Invalid path. Are you sure the path you specified is correct?");
+        else
+            REPORT_ERROR_WITH_CODE("ERROR: GetFileAttributes failed.", GetLastError());
+        return FALSE;
+    }
+
+    if ((Attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+        REPORT_ERROR("ERROR: Path is not a directory.");
+        return FALSE;
+    }
+
+    InstallationPath = Path;
+    if (InstallationPath.back() != TEXT('\\') && InstallationPath.back() != TEXT('/'))
+        InstallationPath.push_back(TEXT('/'));  // for Linux compatible
+
+    return TRUE;
+}
+
+static DWORD BackupFile(std::Tstring& from, std::Tstring& to) {
+    if (::CopyFile(from.c_str(), to.c_str(), TRUE))
+        return ERROR_SUCCESS;
+    else
+        return GetLastError();
+}
+
+static BOOL LoadKey(RSACipher* cipher, LPTSTR filename, 
+                    Patcher::Solution* pSolution0, 
+                    Patcher::Solution* pSolution1) {
     if (filename) {
         std::string PrivateKeyFileName;
 
@@ -59,8 +96,10 @@ int _tmain(int argc, TCHAR* argv[]) {
     }
 
     RSACipher* cipher = nullptr;
-    Patcher::Solution0* pSolution0 = nullptr;
-    Patcher::Solution1* pSolution1 = nullptr;
+    FileMapper* pMainApp = nullptr;
+    FileMapper* pLibcc = nullptr;
+    Patcher::Solution* pSolution0 = nullptr;
+    Patcher::Solution* pSolution1 = nullptr;
     
     DWORD ErrorCode;
 
@@ -70,26 +109,25 @@ int _tmain(int argc, TCHAR* argv[]) {
         goto ON_tmain_ERROR;
     }
 
+    pMainApp = new FileMapper();
+    pLibcc = new FileMapper();
     pSolution0 = new Patcher::Solution0();
     pSolution1 = new Patcher::Solution1();
 
-    if (!pSolution0->SetPath(argv[1])) {
-        PRINT_MESSAGE("The path you specified:");
-        PRINT_LPCTSTR(argv[1]);
-        goto ON_tmain_ERROR;
-    }
-    if (!pSolution1->SetPath(argv[1])) {
+    if (!SetPath(argv[1])) {
         PRINT_MESSAGE("The path you specified:");
         PRINT_LPCTSTR(argv[1]);
         goto ON_tmain_ERROR;
     }
 
 FindMainApp:
-    ErrorCode = pSolution0->TryFile(TEXT("Navicat.exe"));
+    ErrorCode = pMainApp->MapFile(InstallationPath + TEXT("Navicat.exe"));
     if (ErrorCode == ERROR_SUCCESS) {
+        MainAppName = TEXT("Navicat.exe");
         PRINT_MESSAGE("MESSAGE: Navicat.exe has been found.");
         goto FindLibcc;
-    }else if (ErrorCode == ERROR_ACCESS_DENIED) {
+    }
+    if (ErrorCode == ERROR_ACCESS_DENIED) {
         PRINT_MESSAGE("ERROR: Cannot open Navicat.exe for ERROR_ACCESS_DENIED.");
         PRINT_MESSAGE("Please re-run with Administrator privilege.");
         goto ON_tmain_ERROR;
@@ -99,8 +137,9 @@ FindMainApp:
         goto ON_tmain_ERROR;
     }
 
-    ErrorCode = pSolution0->TryFile(TEXT("Modeler.exe"));
+    ErrorCode = pMainApp->MapFile(InstallationPath + TEXT("Modeler.exe"));
     if (ErrorCode == ERROR_SUCCESS) {
+        MainAppName = TEXT("Modeler.exe");
         PRINT_MESSAGE("MESSAGE: Modeler.exe has been found.");
         goto FindLibcc;
     }
@@ -114,8 +153,9 @@ FindMainApp:
         goto ON_tmain_ERROR;
     }
 
-    ErrorCode = pSolution0->TryFile(TEXT("Rviewer.exe"));
+    ErrorCode = pMainApp->MapFile(InstallationPath + TEXT("Rviewer.exe"));
     if (ErrorCode == ERROR_SUCCESS) {
+        MainAppName = TEXT("Rviewer.exe");
         PRINT_MESSAGE("MESSAGE: Rviewer.exe has been found.");
         goto FindLibcc;
     }
@@ -135,13 +175,15 @@ FindMainApp:
     goto ON_tmain_ERROR;
 
 FindLibcc:
-    ErrorCode = pSolution1->TryFile(TEXT("libcc.dll"));
+    ErrorCode = pLibcc->MapFile(InstallationPath + LibccName);
     if (ErrorCode == ERROR_SUCCESS) {
         PRINT_MESSAGE("MESSAGE: libcc.dll has been found.");
     } else if (ErrorCode == ERROR_FILE_NOT_FOUND) {
-        PRINT_MESSAGE("MESSAGE: libcc.dll is not found. Solution1 will be omitted.");
+        PRINT_MESSAGE("MESSAGE: libcc.dll is not found. Solution1 and Solution2 will be omitted.");
         delete pSolution1;
         pSolution1 = nullptr;
+        delete pLibcc;
+        pLibcc = nullptr;
     } else if (ErrorCode == ERROR_ACCESS_DENIED) {
         PRINT_MESSAGE("ERROR: Cannot open libcc.dll for ERROR_ACCESS_DENIED.");
         PRINT_MESSAGE("Please re-run with Administrator privilege.");
@@ -152,33 +194,21 @@ FindLibcc:
     }
 
 SearchPublicKey:
+    pSolution0->SetFile(pMainApp);
+    if (pSolution1) pSolution1->SetFile(pLibcc);
+
     PRINT_MESSAGE("");
-    ErrorCode = pSolution0->MapFile();
-    if (ErrorCode != ERROR_SUCCESS) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-        _tprintf_s(TEXT("ERROR: Cannot map %s. CODE: 0x%08X\n"), 
-                   pSolution0->GetMainAppName().c_str(), 
-                   ErrorCode);
-        goto ON_tmain_ERROR;
-    }
     if (!pSolution0->FindPatchOffset()) {
         _tprintf_s(TEXT("@%s LINE: %u\n"), TEXT(__FUNCTION__), __LINE__);
-        _tprintf_s(TEXT("ERROR: Cannot find RSA public key in %s.\n"),
-                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("ERROR: Cannot find RSA public key in %s.\n"), MainAppName.c_str());
         goto ON_tmain_ERROR;
     }
 
-    if (pSolution1) {
-        ErrorCode = pSolution1->MapFile();
-        if (ErrorCode != ERROR_SUCCESS) {
-            REPORT_ERROR_WITH_CODE("ERROR: Cannot map libcc.dll.", ErrorCode);
-            goto ON_tmain_ERROR;
-        }
-        if (!pSolution1->FindPatchOffset()) {
-            PRINT_MESSAGE("MESSAGE: Cannot find RSA public key in libcc.dll. Solution1 will be omitted.");
-            delete pSolution1;
-            pSolution1 = nullptr;
-        }
+    if (pSolution1 && !pSolution1->FindPatchOffset()) {
+        PRINT_MESSAGE("MESSAGE: Cannot find RSA public key in libcc.dll. Solution1 will be omitted.");
+        pSolution1->SetFile(nullptr);
+        delete pSolution1;
+        pSolution1 = nullptr;
     }
 
 LoadingKey:
@@ -188,35 +218,32 @@ LoadingKey:
 
 BackupFiles:
     PRINT_MESSAGE("");
-    ErrorCode = pSolution0->BackupFile();
+    ErrorCode = BackupFile(InstallationPath + MainAppName, InstallationPath + MainAppName + TEXT(".backup"));
     if (ErrorCode == ERROR_SUCCESS) {
-        _tprintf_s(TEXT("MESSAGE: %s has been backed up successfully.\n"), 
-                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("MESSAGE: %s has been backed up successfully.\n"), MainAppName.c_str());
     } else if (ErrorCode == ERROR_ACCESS_DENIED) {
-        _tprintf_s(TEXT("ERROR: Cannot back up %s for ERROR_ACCESS_DENIED.\n"), 
-                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("ERROR: Cannot back up %s for ERROR_ACCESS_DENIED.\n"), MainAppName.c_str());
         _tprintf_s(TEXT("Please re-run with Administrator privilege.\n"));
         goto ON_tmain_ERROR;
     } else if (ErrorCode == ERROR_FILE_EXISTS) {
-        _tprintf_s(TEXT("ERROR: The backup of %s has been found.\n"), 
-                   pSolution0->GetMainAppName().c_str());
+        _tprintf_s(TEXT("ERROR: The backup of %s has been found.\n"), MainAppName.c_str());
         _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"), 
-                   pSolution0->GetMainAppName().c_str(), 
-                   pSolution0->GetMainAppName().c_str());
+                   MainAppName.c_str(), 
+                   MainAppName.c_str());
         _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"), 
-                   pSolution0->GetMainAppName().c_str(),
-                   pSolution0->GetMainAppName().c_str(), 
-                   pSolution0->GetMainAppName().c_str());
+                   MainAppName.c_str(),
+                   MainAppName.c_str(), 
+                   MainAppName.c_str());
         goto ON_tmain_ERROR;
     } else {
         _tprintf_s(TEXT("ERROR: Cannot back up %s. CODE: 0x%08X\n"),
-                   pSolution0->GetMainAppName().c_str(),
+                   MainAppName.c_str(),
                    ErrorCode);
         goto ON_tmain_ERROR;
     }
 
     if (pSolution1) {
-        ErrorCode = pSolution1->BackupFile();
+        ErrorCode = BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
         if (ErrorCode == ERROR_SUCCESS) {
             PRINT_MESSAGE("MESSAGE: libcc.dll has been backed up successfully.");
         } else if (ErrorCode == ERROR_ACCESS_DENIED) {
@@ -249,6 +276,9 @@ MakingPatch:
 ON_tmain_ERROR:
     delete pSolution1;
     delete pSolution0;
+    delete pLibcc;
+    delete pMainApp;
     delete cipher;
     return 0;
 }
+
