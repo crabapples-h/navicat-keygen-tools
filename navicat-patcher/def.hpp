@@ -29,6 +29,48 @@ namespace Helper {
     void PrintMemory(const void* from, const void* to, const void* base = nullptr);
 
     PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName);
+
+    template<typename _Type, bool _Ascending = true>
+    void QuickSort(_Type* pArray, off_t begin, off_t end) {
+        if (end - begin <= 1)
+            return;
+
+        off_t i = begin;
+        off_t j = end - 1;
+        _Type seperator = static_cast<_Type&&>(pArray[begin]);
+
+        while (i < j) {
+            if (_Ascending) {
+                while (i < j && seperator <= pArray[j])
+                    --j;
+
+                if (i < j)
+                    pArray[i++] = static_cast<_Type&&>(pArray[j]);
+
+                while (i < j && pArray[i] <= seperator)
+                    ++i;
+
+                if (i < j)
+                    pArray[j--] = static_cast<_Type&&>(pArray[i]);
+            } else {
+                while (i < j && seperator >= pArray[j])
+                    --j;
+
+                if (i < j)
+                    pArray[i++] = static_cast<_Type&&>(pArray[j]);
+
+                while (i < j && pArray[i] >= seperator)
+                    ++i;
+
+                if (i < j)
+                    pArray[j--] = static_cast<_Type&&>(pArray[i]);
+            }
+        }
+
+        pArray[i] = static_cast<_Type&&>(seperator);
+        QuickSort<_Type, _Ascending>(pArray, begin, i);
+        QuickSort<_Type, _Ascending>(pArray, i + 1, end);
+    }
 }
 
 #define REPORT_ERROR(msg) Helper::ErrorReport(TEXT(__FUNCTION__), __LINE__, TEXT(msg))
@@ -191,6 +233,39 @@ namespace Patcher {
 
         // Solution1 has some requirements for an RSA-2048 key
         virtual bool CheckKey(RSACipher* cipher) const noexcept override;
+
+        // Return true if found, otherwise return false
+        virtual bool FindPatchOffset() noexcept override;
+
+        // Make a patch based on an RSA private key given
+        // Return true if success, otherwise return false
+        virtual bool MakePatch(RSACipher* cipher) const override;
+    };
+
+    class Solution2 : public Solution {
+    private:
+        static constexpr size_t KeywordsCount = 0x188;
+        static const char KeywordsMeta[KeywordsCount + 1];
+        static uint8_t Keywords[KeywordsCount][5];
+        
+        FileMapper* pTargetFile;
+        off_t PatchOffsets[KeywordsCount];
+
+        void BuildKeywords() noexcept;
+    public:
+        Solution2() :
+            pTargetFile(nullptr) {
+            memset(PatchOffsets, -1, sizeof(PatchOffsets));
+        }
+
+        virtual void SetFile(FileMapper* pLibccFile) noexcept override {
+            pTargetFile = pLibccFile;
+        }
+
+        // Solution2 has no requirements for an RSA-2048 key
+        virtual bool CheckKey(RSACipher* cipher) const noexcept override {
+            return true;
+        }
 
         // Return true if found, otherwise return false
         virtual bool FindPatchOffset() noexcept override;

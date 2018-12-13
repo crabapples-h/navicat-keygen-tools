@@ -1,5 +1,7 @@
 #include "def.hpp"
 
+#define SAFE_DELETE(x) { delete x; x = nullptr; }
+
 static void help() {
     PRINT_MESSAGE("Usage:");
     PRINT_MESSAGE("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]");
@@ -42,7 +44,8 @@ static DWORD BackupFile(std::Tstring& from, std::Tstring& to) {
 
 static BOOL LoadKey(RSACipher* cipher, LPTSTR filename, 
                     Patcher::Solution* pSolution0, 
-                    Patcher::Solution* pSolution1) {
+                    Patcher::Solution* pSolution1,
+                    Patcher::Solution* pSolution2) {
     if (filename) {
         std::string PrivateKeyFileName;
 
@@ -57,7 +60,8 @@ static BOOL LoadKey(RSACipher* cipher, LPTSTR filename,
         }
 
         if (pSolution0 && !pSolution0->CheckKey(cipher) || 
-            pSolution1 && !pSolution1->CheckKey(cipher)) {
+            pSolution1 && !pSolution1->CheckKey(cipher) ||
+            pSolution2 && !pSolution2->CheckKey(cipher)) {
             REPORT_ERROR("ERROR: The RSA private key you provide cannot be used.");
             return FALSE;
         }
@@ -68,7 +72,8 @@ static BOOL LoadKey(RSACipher* cipher, LPTSTR filename,
         do {
             cipher->GenerateKey(2048);
         } while (pSolution0 && !pSolution0->CheckKey(cipher) || 
-                 pSolution1 && !pSolution1->CheckKey(cipher));   // re-generate RSA key if one of CheckKey return FALSE
+                 pSolution1 && !pSolution1->CheckKey(cipher) ||
+                 pSolution2 && !pSolution2->CheckKey(cipher));   // re-generate RSA key if one of CheckKey return false
 
         if (!cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem")) {
             REPORT_ERROR("ERROR: Failed to save RSA private key.");
@@ -100,6 +105,7 @@ int _tmain(int argc, TCHAR* argv[]) {
     FileMapper* pLibcc = nullptr;
     Patcher::Solution* pSolution0 = nullptr;
     Patcher::Solution* pSolution1 = nullptr;
+    Patcher::Solution* pSolution2 = nullptr;
     
     DWORD ErrorCode;
 
@@ -113,6 +119,7 @@ int _tmain(int argc, TCHAR* argv[]) {
     pLibcc = new FileMapper();
     pSolution0 = new Patcher::Solution0();
     pSolution1 = new Patcher::Solution1();
+    pSolution2 = new Patcher::Solution2();
 
     if (!SetPath(argv[1])) {
         PRINT_MESSAGE("The path you specified:");
@@ -180,10 +187,9 @@ FindLibcc:
         PRINT_MESSAGE("MESSAGE: libcc.dll has been found.");
     } else if (ErrorCode == ERROR_FILE_NOT_FOUND) {
         PRINT_MESSAGE("MESSAGE: libcc.dll is not found. Solution1 and Solution2 will be omitted.");
-        delete pSolution1;
-        pSolution1 = nullptr;
-        delete pLibcc;
-        pLibcc = nullptr;
+        SAFE_DELETE(pSolution2);
+        SAFE_DELETE(pSolution1);
+        SAFE_DELETE(pLibcc);
     } else if (ErrorCode == ERROR_ACCESS_DENIED) {
         PRINT_MESSAGE("ERROR: Cannot open libcc.dll for ERROR_ACCESS_DENIED.");
         PRINT_MESSAGE("Please re-run with Administrator privilege.");
@@ -196,6 +202,7 @@ FindLibcc:
 SearchPublicKey:
     pSolution0->SetFile(pMainApp);
     if (pSolution1) pSolution1->SetFile(pLibcc);
+    if (pSolution2) pSolution2->SetFile(pLibcc);
 
     PRINT_MESSAGE("");
     if (!pSolution0->FindPatchOffset()) {
@@ -207,13 +214,18 @@ SearchPublicKey:
     if (pSolution1 && !pSolution1->FindPatchOffset()) {
         PRINT_MESSAGE("MESSAGE: Cannot find RSA public key in libcc.dll. Solution1 will be omitted.");
         pSolution1->SetFile(nullptr);
-        delete pSolution1;
-        pSolution1 = nullptr;
+        SAFE_DELETE(pSolution1);
+    }
+
+    if (pSolution2 && !pSolution2->FindPatchOffset()) {
+        PRINT_MESSAGE("MESSAGE: Cannot find RSA public key in libcc.dll. Solution2 will be omitted.");
+        pSolution2->SetFile(nullptr);
+        SAFE_DELETE(pSolution2);
     }
 
 LoadingKey:
     PRINT_MESSAGE("");
-    if (!LoadKey(cipher, argc == 3 ? argv[2] : nullptr, pSolution0, pSolution1))
+    if (!LoadKey(cipher, argc == 3 ? argv[2] : nullptr, pSolution0, pSolution1, pSolution2))
         goto ON_tmain_ERROR;
 
 BackupFiles:
@@ -242,7 +254,7 @@ BackupFiles:
         goto ON_tmain_ERROR;
     }
 
-    if (pSolution1) {
+    if (pSolution1 || pSolution2) {
         ErrorCode = BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
         if (ErrorCode == ERROR_SUCCESS) {
             PRINT_MESSAGE("MESSAGE: libcc.dll has been backed up successfully.");
@@ -269,16 +281,22 @@ MakingPatch:
     if (pSolution1 && !pSolution1->MakePatch(cipher))
         goto ON_tmain_ERROR;
 
+    if (pSolution2 && !pSolution2->MakePatch(cipher))
+        goto ON_tmain_ERROR;
+
     PRINT_MESSAGE("Solution0 has been done successfully.");
     if (pSolution1)
         PRINT_MESSAGE("Solution1 has been done successfully.");
+    if (pSolution2)
+        PRINT_MESSAGE("Solution2 has been done successfully.");
 
 ON_tmain_ERROR:
-    delete pSolution1;
-    delete pSolution0;
-    delete pLibcc;
-    delete pMainApp;
-    delete cipher;
+    SAFE_DELETE(pSolution2);
+    SAFE_DELETE(pSolution1);
+    SAFE_DELETE(pSolution0);
+    SAFE_DELETE(pLibcc);
+    SAFE_DELETE(pMainApp);
+    SAFE_DELETE(cipher);
     return 0;
 }
 
