@@ -26,7 +26,7 @@
 
   __NOTICE:__
 
-  Start from __Navicat Premium 12.0.25__, Navicat do not load this public key from resource in `navicat.exe`. Instead, the public key is stored in `libcc.dll` and bas been encrypted. To avoid being replaced easily, the public key is split into 5 parts:
+  Start from __Navicat Premium 12.0.25__, Navicat do not load this public key from resource in `navicat.exe`. Instead, the public key is stored in `libcc.dll` and has been encrypted. To avoid being replaced easily, the public key is split into 5 parts:
 
   The following content is discovered from `libcc.dll` of __Navicat Premium x64 12.0.25 Simplified Chinese version__. The SHA256 value of `libcc.dll` is `607e0a84c75966b00f3d12fa833e91d159e4f51ac51b6ba66f98d0c3cbefdce0`. 
   
@@ -126,9 +126,37 @@
   -----END PUBLIC KEY-----
   ```
 
+  __NOTICE:__
+
+  Start from __Navicat Premium 12.1.11__, Navicat do not load the public key through the method I talked before. Of course, the public key is still stored in `libcc.dll`. When Navicat starts, it encrypts the public key by an 8-bytes-long XOR key and stores the ciphertext in static area. When verifing __Activation Code__, Navicat will regenerate the 8-bytes-long XOR key and decrypts the ciphertext in static area to get the public key.
+
+  In `libcc.dll`, x64 version, you can find some instructions that looks like:
+
+  ```asm
+  xor eax, 'M'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'B'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'j'
+  mov byte_xxxxxx, al
+  ...
+  ...
+  ```
+
 * __Request Code__
 
-  It is a Base64 string that represents 256-bytes-long data, while the 256-bytes-long data is the cipher text of __Offline Activation Information__ encrypted by __Navicat Activation Public Key__.
+  It is a Base64 string that represents 256-bytes-long data, while the 256-bytes-long data is the cipher text of __Offline Activation Request Information__ encrypted by __Navicat Activation Public Key__.
 
 * __Offline Activation Request Information__
 

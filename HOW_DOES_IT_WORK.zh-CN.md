@@ -122,6 +122,34 @@
   -----END PUBLIC KEY-----
   ```
 
+  __注意：__
+
+  从 __Navicat Premium 12.1.11__ 开始，Navicat不在用上面说的方法加载密钥。当然密钥还是储存在`libcc.dll`文件中。当Navicat启动时，它会用8字节长的XOR密钥来加密公钥，并储存到一个静态数据区中。当验证 __激活码__ 时，Navicat会重新生成一样的8字节XOR密钥，并解密在静态储存区中的密文，从而获取公钥。
+
+  在`libcc.dll`，x64版本中，你会看到如下的几条指令：
+
+  ```asm
+  xor eax, 'M'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'B'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'I'
+  mov byte_xxxxxx, al
+  ...
+  xor eax, 'j'
+  mov byte_xxxxxx, al
+  ...
+  ...
+  ```
+
 * __请求码__
 
   这是一个Base64编码的字符串，代表的是长度为256字节的数据。这256字节的数据是 __离线激活信息__ 用 __Navicat激活公钥__ 加密的密文。
