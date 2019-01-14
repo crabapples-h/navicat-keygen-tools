@@ -44,7 +44,7 @@ namespace Patcher {
             TempFileHandle.TakeHoldOf(
                 CreateFile(FileName.c_str(),
                            GENERIC_READ | GENERIC_WRITE,
-                           NULL,
+                           FILE_SHARE_READ,
                            NULL,
                            OPEN_EXISTING,
                            FILE_ATTRIBUTE_NORMAL,
