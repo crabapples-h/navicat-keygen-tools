@@ -1,4 +1,5 @@
 #pragma once
+#include "ResourceGuard.hpp"
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
