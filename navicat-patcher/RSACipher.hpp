@@ -29,8 +29,7 @@ namespace Patcher {
         };
     private:
         ResourceGuard<OpensslRSATraits> _RsaObj;
-
-        RSACipher() noexcept = default;
+        
         RSACipher(RSA* pRsa) : _RsaObj(pRsa) {}
 
         // Copy constructor is not allowed
@@ -98,6 +97,8 @@ namespace Patcher {
             }
             return aCipher;
         }
+
+        RSACipher() : _RsaObj(RSA_new()) {}
 
         void GenerateKey(int bits, unsigned int e = RSA_F4) {
             ResourceGuard<OpensslBNTraits> bn_e;
