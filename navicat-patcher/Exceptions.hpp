@@ -66,12 +66,12 @@ namespace Patcher {
         }
     };
 
-    class OpensslException : public Exception {
+    class OpensslError : public Exception {
     private:
         const unsigned long _ErrorCode;
     public:
 
-        OpensslException(const char* FileName, 
+        OpensslError(const char* FileName, 
                          int Line, 
                          unsigned long Code, 
                          const char* Message) noexcept :

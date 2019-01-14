@@ -104,16 +104,16 @@ namespace Patcher {
 
             bn_e.TakeHoldOf(BN_new());
             if (bn_e.IsValid() == false)
-                throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                       "BN_new fails.");
+                throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                   "BN_new fails.");
 
             if (!BN_set_word(bn_e, e))
                 throw Exception(__BASE_FILE__, __LINE__, 
                                 "BN_set_word fails.");
 
             if (!RSA_generate_key_ex(_RsaObj, bits, bn_e, nullptr))
-                throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                       "RSA_generate_key_ex fails.");
+                throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                   "RSA_generate_key_ex fails.");
         }
 
         template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
@@ -195,8 +195,8 @@ namespace Patcher {
                                                   _RsaObj,
                                                   padding);
                 if (write_bytes == -1)
-                    throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                           "RSA_private_encrypt fails.");
+                    throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                       "RSA_private_encrypt fails.");
             } else {
                 write_bytes = RSA_public_encrypt(len,
                                                  reinterpret_cast<const unsigned char*>(from),
@@ -204,8 +204,8 @@ namespace Patcher {
                                                  _RsaObj,
                                                  padding);
                 if (write_bytes == -1)
-                    throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                           "RSA_public_encrypt fails.");
+                    throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                       "RSA_public_encrypt fails.");
             }
 
             return write_bytes;
@@ -222,8 +222,8 @@ namespace Patcher {
                                                   _RsaObj,
                                                   padding);
                 if (write_bytes == -1)
-                    throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                           "RSA_private_decrypt fails.");
+                    throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                       "RSA_private_decrypt fails.");
             } else {
                 write_bytes = RSA_public_decrypt(len,
                                                  reinterpret_cast<const unsigned char*>(from),
@@ -231,8 +231,8 @@ namespace Patcher {
                                                  _RsaObj,
                                                  padding);
                 if (write_bytes == -1)
-                    throw OpensslException(__BASE_FILE__, __LINE__, ERR_get_error(),
-                                           "RSA_public_decrypt fails.");
+                    throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(),
+                                       "RSA_public_decrypt fails.");
             }
 
             return write_bytes;
