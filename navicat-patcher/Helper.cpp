@@ -1,94 +1,102 @@
-#include "def.hpp"
-#include "NavicatCrypto.hpp"
+#include <tchar.h>
+#include "Helper.hpp"
+#include "ResourceGuard.hpp"
+#include "Exceptions.hpp"
 
 namespace Helper {
 
     static Navicat11Crypto NavicatCipher("23970790", 8);
 
-    std::string EncryptPublicKey(const std::string& PublicKeyString) {
-        return NavicatCipher.EncryptString(PublicKeyString.c_str(), 
-                                           PublicKeyString.length());
+    std::string ConvertToUTF8(PCSTR From, DWORD CodePage) {
+        std::string result;
+        int RequiredLength = 0;
+        ResourceGuard<CppDynamicArrayTraits<WCHAR>> pszUnicodeString;
+
+        RequiredLength = MultiByteToWideChar(CP_ACP, 
+                                             NULL, 
+                                             From, 
+                                             -1, 
+                                             nullptr, 
+                                             0);
+        if (RequiredLength == 0)
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(), 
+                                       "MultiByteToWideChar fails.");
+
+        pszUnicodeString.TakeHoldOf(new WCHAR[RequiredLength]());
+
+        if (!MultiByteToWideChar(CP_ACP, 
+                                 NULL, 
+                                 From, 
+                                 -1, 
+                                 pszUnicodeString, 
+                                 RequiredLength))
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                                       "MultiByteToWideChar fails.");
+
+        RequiredLength = WideCharToMultiByte(CP_UTF8, 
+                                             NULL, 
+                                             pszUnicodeString, 
+                                             -1, 
+                                             nullptr, 
+                                             0, 
+                                             nullptr, 
+                                             nullptr);
+        if (RequiredLength == 0)
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                                       "WideCharToMultiByte fails.");
+
+        result.resize(RequiredLength);
+
+        if (!WideCharToMultiByte(CP_UTF8, 
+                                 NULL, 
+                                 pszUnicodeString, 
+                                 -1, 
+                                 result.data(), 
+                                 RequiredLength, 
+                                 nullptr, 
+                                 nullptr))
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                                       "WideCharToMultiByte fails.");
+
+        while (result.back() == 0)
+            result.pop_back();
+
+        return result;
     }
 
-    bool ConvertToUTF8(LPCSTR from, std::string& to) {
-        bool bSuccess = false;
-        int RequireLength = 0;
-        LPWSTR lpUnicodeString = nullptr;
+    std::string ConvertToUTF8(PCWSTR From) {
+        std::string result;
+        int RequiredLength = 0;
 
-        RequireLength = MultiByteToWideChar(CP_ACP, NULL, from, -1, nullptr, 0);
-        if (RequireLength == 0)
-            goto ON_ConvertToUTF8_0_ERROR;
+        RequiredLength = WideCharToMultiByte(CP_UTF8, 
+                                             NULL, 
+                                             From, 
+                                             -1, 
+                                             nullptr, 
+                                             0, 
+                                             nullptr, 
+                                             nullptr);
+        if (RequiredLength == 0)
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                                       "WideCharToMultiByte fails.");
 
-        lpUnicodeString = reinterpret_cast<LPWSTR>(HeapAlloc(GetProcessHeap(),
-                                                             HEAP_ZERO_MEMORY,
-                                                             RequireLength * sizeof(WCHAR)));
-        if (lpUnicodeString == nullptr)
-            goto ON_ConvertToUTF8_0_ERROR;
+        result.resize(RequiredLength);
 
-        if (!MultiByteToWideChar(CP_ACP, NULL, from, -1, lpUnicodeString, RequireLength))
-            goto ON_ConvertToUTF8_0_ERROR;
+        if (!WideCharToMultiByte(CP_UTF8, 
+                                 NULL, 
+                                 From, 
+                                 -1, 
+                                 result.data(), 
+                                 RequiredLength, 
+                                 nullptr, 
+                                 nullptr))
+            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                                       "WideCharToMultiByte fails.");
 
-        RequireLength = WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, nullptr, 0, nullptr, nullptr);
-        if (RequireLength == 0)
-            goto ON_ConvertToUTF8_0_ERROR;
+        while (result.back() == 0)
+            result.pop_back();
 
-        to.resize(RequireLength);
-
-        if (!WideCharToMultiByte(CP_UTF8, NULL, lpUnicodeString, -1, to.data(), RequireLength, nullptr, nullptr))
-            goto ON_ConvertToUTF8_0_ERROR;
-
-        while (to.back() == 0)
-            to.pop_back();
-
-        bSuccess = true;
-
-    ON_ConvertToUTF8_0_ERROR:
-        if (lpUnicodeString)
-            HeapFree(GetProcessHeap(), NULL, lpUnicodeString);
-
-        return bSuccess;
-    }
-
-    bool ConvertToUTF8(LPCWSTR from, std::string& to) {
-        bool bSuccess = false;
-        int RequireLength = 0;
-
-        RequireLength = WideCharToMultiByte(CP_UTF8, NULL, from, -1, nullptr, 0, nullptr, nullptr);
-        if (RequireLength == 0)
-            goto ON_ConvertToUTF8_1_ERROR;
-
-        to.resize(RequireLength);
-        if (!WideCharToMultiByte(CP_UTF8, NULL, from, -1, to.data(), RequireLength, nullptr, nullptr))
-            goto ON_ConvertToUTF8_1_ERROR;
-
-        while (to.back() == 0)
-            to.pop_back();
-
-        bSuccess = true;
-
-    ON_ConvertToUTF8_1_ERROR:
-        return bSuccess;
-    }
-
-    bool ConvertToUTF8(std::string& str) {
-        bool bSuccess = false;
-        std::string temp;
-
-        bSuccess = ConvertToUTF8(str.c_str(), temp);
-        if (bSuccess)
-            str = temp;
-
-        return bSuccess;
-    }
-
-    void ErrorReport(LPCTSTR at, UINT line, LPCTSTR msg) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), at, line);
-        _tprintf_s(TEXT("%s\n"), msg);
-    }
-
-    void ErrorReport(LPCTSTR at, UINT line, LPCTSTR msg, DWORD err_code) {
-        _tprintf_s(TEXT("@%s LINE: %u\n"), at, line);
-        _tprintf_s(TEXT("%s CODE: 0x%08X\n"), msg, err_code);
+        return result;
     }
 
     //
@@ -109,7 +117,7 @@ namespace Helper {
     //  Print memory data in [from, to) at least
     //  If `base` is not nullptr, print address as offset. Otherwise, as absolute address.
     //  NOTICE:
-    //      `base` must >= `from`
+    //      `base` must <= `from`
     //  
     void PrintMemory(const void* from, const void* to, const void* base) {
         const uint8_t* start = reinterpret_cast<const uint8_t*>(from);
@@ -160,26 +168,4 @@ namespace Helper {
         }
     }
 
-    PIMAGE_SECTION_HEADER ImageSectionHeader(PVOID lpBase, LPCSTR lpSectionName) {
-        PIMAGE_DOS_HEADER pFileHeader = NULL;
-        PIMAGE_NT_HEADERS pNtHeader = NULL;
-        IMAGE_SECTION_HEADER* pSectionHeaders = NULL;
-
-        pFileHeader = (IMAGE_DOS_HEADER*)lpBase;
-        if (pFileHeader->e_magic != IMAGE_DOS_SIGNATURE)
-            return NULL;
-
-        pNtHeader = (IMAGE_NT_HEADERS*)((BYTE*)lpBase + pFileHeader->e_lfanew);
-        if (pNtHeader->Signature != IMAGE_NT_SIGNATURE)
-            return NULL;
-
-        pSectionHeaders = (IMAGE_SECTION_HEADER*)((BYTE*)pNtHeader +
-                                                  offsetof(IMAGE_NT_HEADERS, OptionalHeader) +
-                                                  pNtHeader->FileHeader.SizeOfOptionalHeader);
-        for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; ++i)
-            if (_stricmp((const char*)pSectionHeaders[i].Name, lpSectionName) == 0)
-                return pSectionHeaders + i;
-
-        return NULL;
-    }
 }
