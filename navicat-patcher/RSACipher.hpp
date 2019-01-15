@@ -46,16 +46,16 @@ private:
     template<KeyType _Type, KeyFormat _Format = KeyFormat::NotSpecified>
     static void _RSAToBIO(RSA* pRsaObject, BIO* pBioObject) {
         if constexpr (_Type == KeyType::PrivateKey) {
-            if (!PEM_write_bio_RSAPrivateKey(bio_file, pRsaObject, nullptr, nullptr, 0, nullptr, nullptr))
+            if (!PEM_write_bio_RSAPrivateKey(pBioObject, pRsaObject, nullptr, nullptr, 0, nullptr, nullptr))
                 throw Exception(__BASE_FILE__, __LINE__,
                                 "PEM_write_bio_RSAPrivateKey fails.");
         } else {
             if constexpr (_Format == KeyFormat::PEM) {
-                if (!PEM_write_bio_RSA_PUBKEY(bio_file, pRsaObject))
+                if (!PEM_write_bio_RSA_PUBKEY(pBioObject, pRsaObject))
                     throw Exception(__BASE_FILE__, __LINE__,
                                     "PEM_write_bio_RSA_PUBKEY fails.");
             } else if constexpr (_Format == KeyFormat::PKCS1) {
-                if (!PEM_write_bio_RSAPublicKey(bio_file, pRsaObject))
+                if (!PEM_write_bio_RSAPublicKey(pBioObject, pRsaObject))
                     throw Exception(__BASE_FILE__, __LINE__,
                                     "PEM_write_bio_RSAPublicKey fails.");
             } else {
@@ -69,18 +69,18 @@ private:
         RSA* pNewRsaObject;
 
         if constexpr (_Type == KeyType::PrivateKey) {
-            pNewRsaObject = PEM_read_bio_RSAPrivateKey(bio_file, nullptr, nullptr, nullptr);
+            pNewRsaObject = PEM_read_bio_RSAPrivateKey(pBioObject, nullptr, nullptr, nullptr);
             if (pNewRsaObject == nullptr)
                 throw Exception(__BASE_FILE__, __LINE__,
                                 "PEM_read_bio_RSAPrivateKey fails.");
         } else {
             if constexpr (_Format == KeyFormat::PEM) {
-                pNewRsaObject = PEM_read_bio_RSA_PUBKEY(bio_file, nullptr, nullptr, nullptr);
+                pNewRsaObject = PEM_read_bio_RSA_PUBKEY(pBioObject, nullptr, nullptr, nullptr);
                 if (pNewRsaObject == nullptr)
                     throw Exception(__BASE_FILE__, __LINE__,
                                     "PEM_read_bio_RSA_PUBKEY fails.");
             } else if constexpr (_Format == KeyFormat::PKCS1) {
-                pNewRsaObject = PEM_read_bio_RSAPublicKey(bio_file, nullptr, nullptr, nullptr);
+                pNewRsaObject = PEM_read_bio_RSAPublicKey(pBioObject, nullptr, nullptr, nullptr);
                 if (pNewRsaObject == nullptr)
                     throw Exception(__BASE_FILE__, __LINE__,
                                     "PEM_read_bio_RSAPublicKey fails.");
