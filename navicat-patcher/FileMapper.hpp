@@ -1,14 +1,13 @@
+#pragma once
 #include "Exceptions.hpp"
 #include "ResourceGuardWin32.hpp"
 #include <string>
-#include <utility>
 
 #if defined(UNICODE) || defined(_UNICODE)
 using String = std::wstring;
 #else
 using String = std::string;
 #endif
-
 
 class FileMapper {
 private:
@@ -35,7 +34,7 @@ public:
         return reinterpret_cast<_Type*>(_FileView.GetHandle());
     }
 
-    void MapFile(const String& FileName) noexcept {
+    void MapFile(const String& FileName) {
         ResourceGuard<FileHandleTraits> TempFileHandle;
         ResourceGuard<GenericHandleTraits> TempFileMapHandle;
         ResourceGuard<MapViewTraits> TempFileView;
