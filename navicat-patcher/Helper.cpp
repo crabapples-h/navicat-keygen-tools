@@ -3,6 +3,9 @@
 #include "ExceptionSystem.hpp"
 #include "ResourceGuard.hpp"
 
+#undef __BASE_FILE__
+#define __BASE_FILE__ "Helper.cpp"
+
 namespace Helper {
 
     static Navicat11Crypto NavicatCipher("23970790", 8);

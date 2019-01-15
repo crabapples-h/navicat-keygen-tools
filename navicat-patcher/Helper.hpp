@@ -4,6 +4,9 @@
 #include <sys/types.h>
 #include "NavicatCrypto.hpp"
 
+#undef __BASE_FILE__
+#define __BASE_FILE__ "Helper.hpp"
+
 namespace Helper {
 
     extern Navicat11Crypto NavicatCipher;

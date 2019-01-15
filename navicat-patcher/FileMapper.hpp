@@ -5,6 +5,9 @@
 #include "ExceptionSystem.hpp"
 #include "ResourceGuardWin32.hpp"
 
+#undef __BASE_FILE__
+#define __BASE_FILE__ "FileMapper.hpp"
+
 #if defined(UNICODE) || defined(_UNICODE)
 using String = std::wstring;
 #else

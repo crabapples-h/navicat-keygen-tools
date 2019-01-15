@@ -19,6 +19,8 @@
 #pragma comment(lib, "WS2_32.lib")      // some symbol are used in OpenSSL static lib
 #pragma comment(lib, "Crypt32.lib")     // some symbol are used in OpenSSL static lib
 
+#undef __BASE_FILE__
+#define __BASE_FILE__ "RSACipher.hpp"
 
 class RSACipher {
 public:
