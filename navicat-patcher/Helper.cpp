@@ -19,8 +19,8 @@ namespace Helper {
                                              nullptr, 
                                              0);
         if (RequiredLength == 0)
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(), 
-                                       "MultiByteToWideChar fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(), 
+                              "MultiByteToWideChar fails.");
 
         pszUnicodeString.TakeHoldOf(new WCHAR[RequiredLength]());
 
@@ -30,8 +30,8 @@ namespace Helper {
                                  -1, 
                                  pszUnicodeString, 
                                  RequiredLength))
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
-                                       "MultiByteToWideChar fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                              "MultiByteToWideChar fails.");
 
         RequiredLength = WideCharToMultiByte(CP_UTF8, 
                                              NULL, 
@@ -42,8 +42,8 @@ namespace Helper {
                                              nullptr, 
                                              nullptr);
         if (RequiredLength == 0)
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
-                                       "WideCharToMultiByte fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                              "WideCharToMultiByte fails.");
 
         result.resize(RequiredLength);
 
@@ -55,8 +55,8 @@ namespace Helper {
                                  RequiredLength, 
                                  nullptr, 
                                  nullptr))
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
-                                       "WideCharToMultiByte fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                              "WideCharToMultiByte fails.");
 
         while (result.back() == 0)
             result.pop_back();
@@ -77,8 +77,8 @@ namespace Helper {
                                              nullptr, 
                                              nullptr);
         if (RequiredLength == 0)
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
-                                       "WideCharToMultiByte fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                              "WideCharToMultiByte fails.");
 
         result.resize(RequiredLength);
 
@@ -90,8 +90,8 @@ namespace Helper {
                                  RequiredLength, 
                                  nullptr, 
                                  nullptr))
-            throw Patcher::SystemError(__BASE_FILE__, __LINE__, GetLastError(),
-                                       "WideCharToMultiByte fails.");
+            throw SystemError(__BASE_FILE__, __LINE__, GetLastError(),
+                              "WideCharToMultiByte fails.");
 
         while (result.back() == 0)
             result.pop_back();
