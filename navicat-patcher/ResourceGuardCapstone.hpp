@@ -1,6 +1,7 @@
 #pragma once
 #include "ResourceGuard.hpp"
-#include <capstone/capstone.h>
+
+#if defined(CAPSTONE_ENGINE_H)
 
 struct CapstoneHandleTraits {
     using HandleType = csh;
@@ -9,4 +10,6 @@ struct CapstoneHandleTraits {
         cs_close(&Handle);
     }
 };
+
+#endif
 

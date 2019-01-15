@@ -1,8 +1,7 @@
 #pragma once
 #include "ResourceGuard.hpp"
-#include <openssl/bio.h>
-#include <openssl/bn.h>
-#include <openssl/rsa.h>
+
+#if defined(HEADER_BIO_H)
 
 struct OpensslBIOTraits {
     using HandleType = BIO*;
@@ -10,11 +9,16 @@ struct OpensslBIOTraits {
     static constexpr auto& Releasor = BIO_free;
 };
 
+
 struct OpensslBIOChainTraits {
     using HandleType = BIO*;
     static inline const HandleType InvalidValue = nullptr;
     static constexpr auto& Releasor = BIO_free_all;
 };
+
+#endif
+
+#if defined(HEADER_BN_H)
 
 struct OpensslBNTraits {
     using HandleType = BIGNUM*;
@@ -22,9 +26,15 @@ struct OpensslBNTraits {
     static constexpr auto& Releasor = BN_free;
 };
 
+#endif
+
+#if defined(HEADER_RSA_H)
+
 struct OpensslRSATraits {
     using HandleType = RSA*;
     static inline const HandleType InvalidValue = nullptr;
     static constexpr auto& Releasor = RSA_free;
 };
+
+#endif
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "ResourceGuard.hpp"
-#include <windows.h>
+
+#if defined(_WINDOWS_)
 
 struct GenericHandleTraits {
     using HandleType = HANDLE;
@@ -19,4 +20,6 @@ struct MapViewTraits {
     static inline const HandleType InvalidValue = NULL;
     static constexpr auto& Releasor = UnmapViewOfFile;
 };
+
+#endif
 
