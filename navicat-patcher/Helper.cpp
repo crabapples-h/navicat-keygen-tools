@@ -171,4 +171,22 @@ namespace Helper {
         }
     }
 
+    void PrintSomeBytes(const void* p, size_t s) {
+        const uint8_t* byte_ptr = reinterpret_cast<const uint8_t*>(p);
+
+        if (s == 0)
+            return;
+
+        if (s == 1) {
+            _tprintf_s(TEXT("%02X"), byte_ptr[0]);
+            return;
+        }
+
+        s -= 1;
+        for (size_t i = 0; i < s; ++i)
+            _tprintf_s(TEXT("%02X "), byte_ptr[i]);
+
+        _tprintf_s(TEXT("%02X"), byte_ptr[s]);
+    }
+
 }

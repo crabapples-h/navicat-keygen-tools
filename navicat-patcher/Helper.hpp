@@ -18,6 +18,7 @@ namespace Helper {
     //      `base` must <= `from`
     //  
     void PrintMemory(const void* from, const void* to, const void* base = nullptr);
+    void PrintSomeBytes(const void* p, size_t s);
 
     template<typename _Type, bool _Ascending = true>
     void QuickSort(_Type* pArray, off_t begin, off_t end) {
