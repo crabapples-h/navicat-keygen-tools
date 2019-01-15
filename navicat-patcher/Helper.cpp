@@ -1,7 +1,7 @@
-#include <tchar.h>
 #include "Helper.hpp"
+#include <tchar.h>
+#include "ExceptionSystem.hpp"
 #include "ResourceGuard.hpp"
-#include "Exceptions.hpp"
 
 namespace Helper {
 

@@ -1,7 +1,9 @@
 #pragma once
-#include "Exceptions.hpp"
-#include "ResourceGuardWin32.hpp"
+#include <windows.h>
 #include <string>
+
+#include "ExceptionSystem.hpp"
+#include "ResourceGuardWin32.hpp"
 
 #if defined(UNICODE) || defined(_UNICODE)
 using String = std::wstring;

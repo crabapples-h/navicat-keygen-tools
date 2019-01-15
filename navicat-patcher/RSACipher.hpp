@@ -1,9 +1,15 @@
 #pragma once
-#include "Exceptions.hpp"
-#include "ResourceGuardOpenssl.hpp"
+#include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/bio.h>
+#include <openssl/rsa.h>
+
+#include "ExceptionOpenssl.hpp"
+#include "ResourceGuardOpenssl.hpp"
+
 #include <string>
 #include <memory.h>
+
 
 #ifdef _DEBUG
 #pragma comment(lib, "libcryptoMTd.lib")
