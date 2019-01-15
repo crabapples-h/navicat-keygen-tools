@@ -96,14 +96,18 @@ public:
 
     static RSACipher* Create() {
         RSACipher* aCipher = new RSACipher(RSA_new());
-        if (aCipher->_RsaObj == nullptr) {
+        if (aCipher->_RsaObj.IsValid() == false) {
             delete aCipher;
             aCipher = nullptr;
         }
         return aCipher;
     }
 
-    RSACipher() : _RsaObj(RSA_new()) {}
+    RSACipher() : _RsaObj(RSA_new()) {
+        if (_RsaObj.IsValid() == false)
+            throw OpensslError(__BASE_FILE__, __LINE__, ERR_get_error(), 
+                               "RSA_new fails.");
+    }
 
     void GenerateKey(int bits, unsigned int e = RSA_F4) {
         ResourceGuard<OpensslBNTraits> bn_e;
