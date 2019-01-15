@@ -4,12 +4,9 @@
 
 struct CapstoneHandleTraits {
     using HandleType = csh;
-    static const HandleType InvalidValue;
+    static inline const HandleType InvalidValue = 0;
     static inline void Releasor(csh Handle) {
         cs_close(&Handle);
     }
 };
-
-inline const CapstoneHandleTraits::HandleType
-    CapstoneHandleTraits::InvalidValue = 0;
 

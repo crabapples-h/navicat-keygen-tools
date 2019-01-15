@@ -86,27 +86,19 @@ public:
 template<typename __ClassType>
 struct CppObjectTraits {
     using HandleType = __ClassType*;
-    static const HandleType InvalidValue;
+    static inline const HandleType InvalidValue = nullptr;
     static inline void Releasor(HandleType pObject) {
         delete pObject;
     }
 };
 
 template<typename __ClassType>
-inline const typename CppObjectTraits<__ClassType>::HandleType
-    CppObjectTraits<__ClassType>::InvalidValue = nullptr;
-
-template<typename __ClassType>
 struct CppDynamicArrayTraits {
     using HandleType = __ClassType*;
-    static const HandleType InvalidValue;
+    static inline const HandleType InvalidValue = nullptr;
     static inline void Releasor(HandleType pArray) {
         delete[] pArray;
     }
 };
-
-template<typename __ClassType>
-inline const typename CppDynamicArrayTraits<__ClassType>::HandleType
-    CppDynamicArrayTraits<__ClassType>::InvalidValue = nullptr;
 
 
