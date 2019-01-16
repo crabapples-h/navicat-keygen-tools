@@ -15,30 +15,57 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="_tmain.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Solution0.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Solution1.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Helper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Solution2.cpp">
+    <ClCompile Include="_tmain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchSolution3.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="def.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="RSACipher.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="NavicatCrypto.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="FileMapper.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PatchSolution.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceGuard.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceGuardCapstone.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceGuardOpenssl.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceGuardWin32.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Helper.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageHelper.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ExceptionOpenssl.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Exception.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ExceptionSystem.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ExceptionCapstone.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
