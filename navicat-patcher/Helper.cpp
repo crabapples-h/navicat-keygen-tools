@@ -189,4 +189,10 @@ namespace Helper {
         _tprintf_s(TEXT("%02X"), byte_ptr[s]);
     }
 
+    bool IsPrintable(const uint8_t* p, size_t s) {
+        for (size_t i = 0; i < s; ++i)
+            if (isprint(p[i]) == false)
+                return false;
+        return true;
+    }
 }

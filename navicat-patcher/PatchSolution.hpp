@@ -10,7 +10,11 @@
 
 // lib required by capstone
 #pragma comment(lib, "legacy_stdio_definitions.lib")
+#if defined(_M_AMD64)
 #pragma comment(lib, "capstone_static.lib")
+#else
+#pragma comment(lib, "capstone.lib")
+#endif
 
 #undef __BASE_FILE__
 #define __BASE_FILE__ "PatchSolution.hpp"
@@ -41,7 +45,13 @@ private:
     struct BranchContext {
         const uint8_t* PtrOfCode;
         size_t SizeOfCode;
+#if defined(_M_AMD64)
         uint64_t Rip;
+#elif defined(_M_IX86)
+        uint64_t Eip;
+#else
+#error "Unknown architecture."
+#endif
     };
 
     struct PatchPointInfo {
@@ -60,8 +70,10 @@ private:
     ImageInterpreter _TargetFile;
     mutable PatchPointInfo _Patches[KeywordsCount];
 
-    bool CheckIfMatchPattern(cs_insn* pInstruction, size_t i) const;
-    bool CheckIfFound(cs_insn* PtrToInstruction, size_t i) const;
+    bool CheckIfMatchPattern(cs_insn* PtrToInstruction) const;
+
+    bool CheckIfFound(cs_insn* PtrToInstruction, 
+                      size_t i) const;
 
     PatchPointInfo CreatePatchPoint(const uint8_t* PtrToCode, 
                                     cs_insn* PtrToInstruction, 

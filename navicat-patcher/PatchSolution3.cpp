@@ -14,6 +14,12 @@ FILE _iob[] = { *stdin, *stdout, *stderr };
 extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
 // ------------
 
+#if defined(_M_AMD64)
+#define REG_IP Rip
+#else
+#define REG_IP Eip
+#endif
+
 const PatchSolution3::KeywordType PatchSolution3::Keywords[KeywordsCount] = {
     { { 0x4d, 0x49, 0x49 }, 3, STRING_DATA, false },
     { { 0x42, 0x49 }, 2, IMM_DATA, false },
@@ -149,52 +155,36 @@ PatchSolution3::PatchSolution3() {
     memset(_Patches, 0, sizeof(_Patches));
 }
 
-bool PatchSolution3::CheckIfMatchPattern(cs_insn* pInstruction, size_t i) const {
+#if defined(_M_AMD64)
+bool PatchSolution3::CheckIfMatchPattern(cs_insn* PtrToInstruction) const {
     // the instruction we're interested in has one of the following patterns:
-    //  1. mov PTR [MEM], IMM
-    //  2. lea REG, PTR [MEM]
-    //
-    // They both have 2 operands.
-    // So if op_count != 2, just pass and see the next one.
-    if (pInstruction->detail->x86.op_count != 2)
-        return false;
+    //  1. mov PTR [MEM], IMM   (IMM must consist of printable chars)               // for IMM_DATA
+    //  2. lea REG, PTR [MEM]   (MEM must point to a non-empty printable string)    // for STRING_DATA
 
-    if (pInstruction->detail->x86.operands[1].type == X86_OP_IMM) {
-        if (Keywords[i].Type != IMM_DATA)
+    if (_stricmp(PtrToInstruction->mnemonic, "mov") == 0) {
+        if (PtrToInstruction->detail->x86.operands[1].type != X86_OP_IMM)
             return false;
 
-        uint64_t ImmValue = pInstruction->detail->x86.operands[1].imm;
-        uint8_t ImmSize = pInstruction->detail->x86.operands[1].size;
+        uint8_t* PtrToImm =
+            PtrToInstruction->bytes +
+            PtrToInstruction->detail->x86.encoding.imm_offset;
+        uint8_t ImmSize =
+            PtrToInstruction->detail->x86.encoding.imm_size;
 
-        // each bytes of ImmValue must be printable;
-        for (uint8_t j = 0; j < ImmSize; ++j) {
-            uint8_t c = static_cast<uint8_t>(ImmValue & 0xff);
-            ImmValue >>= 8;
-
-            if (isprint(c) == false)
-                return false;
-        }
-
-        return true;
-    } else if (pInstruction->detail->x86.operands[1].type == X86_OP_MEM) {
-        if (Keywords[i].Type != STRING_DATA)
-            return false;
-
+        return Helper::IsPrintable(PtrToImm, ImmSize);
+    } else if (_stricmp(PtrToInstruction->mnemonic, "lea") == 0) {
         // as far as I know, all strings are loaded by "lea REG, QWORD PTR[RIP + disp]"
-        if (_stricmp(pInstruction->mnemonic, "lea") != 0)
-            return false;
-
-        // must be "[RIP + disp]"
-        if (pInstruction->detail->x86.operands[1].mem.base != X86_REG_RIP)
+        // so it must be "[RIP + disp]"
+        if (PtrToInstruction->detail->x86.operands[1].mem.base != X86_REG_RIP)
             return false;
 
         // scale must 1, otherwise pattern mismatches
-        if (pInstruction->detail->x86.operands[1].mem.scale != 1)
+        if (PtrToInstruction->detail->x86.operands[1].mem.scale != 1)
             return false;
 
         auto StringRva = static_cast<uintptr_t>(
-            pInstruction->address + pInstruction->size +    // RIP
-            pInstruction->detail->x86.operands[1].mem.disp
+            PtrToInstruction->address + PtrToInstruction->size +    // RIP
+            PtrToInstruction->detail->x86.operands[1].mem.disp
         );
 
         auto PtrToString = _TargetFile.RvaToPointer<uint8_t>(StringRva);
@@ -204,39 +194,94 @@ bool PatchSolution3::CheckIfMatchPattern(cs_insn* pInstruction, size_t i) const 
             return false;
 
         // PtrToString must have at least one char
-        if (*PtrToString == '\x00')
-            return false;
-
         // every char in PtrToString must be printable, otherwise pattern mismatches
-        while (*PtrToString != '\x00') {
-            if (isprint(*PtrToString) == false)
-                return false;
-            PtrToString++;
-        }
+        auto StringLength = strlen(reinterpret_cast<char*>(PtrToString));
+        if (StringLength && Helper::IsPrintable(PtrToString, StringLength))
+            return true;
 
-        return true;
+        return false;
     } else {
         return false;
     }
 }
+#else       // for i386 
+bool PatchSolution3::CheckIfMatchPattern(cs_insn* PtrToInstruction) const {
+    // the instruction we're interested in has one of the following patterns:
+    //  1. mov PTR [MEM], IMM   (IMM must consist of printable chars)               // for KeywordType::IMM_DATA
+    //     except pattern "mov [ebp - 0x4], IMM"
+    //  2. push IMM             (IMM must consist of printable chars)               // for KeywordType::IMM_DATA
+    //  3. push offset MEM      (MEM must point to a non-empty printable string)    // for KeywordType::STRING_DATA                     
+    //
 
+    if (_stricmp(PtrToInstruction->mnemonic, "mov") == 0) {
+        // filter the case "mov [ebp - 0x4], IMM"
+        // because IMM may consist of printable chars in that case, which can mislead us.
+        //
+        // Here I use "> -0x30" to intensify condition, instead of "== -0x4"
+        if (PtrToInstruction->detail->x86.operands[0].type == X86_OP_MEM &&
+            PtrToInstruction->detail->x86.operands[0].mem.base == X86_REG_EBP &&
+            PtrToInstruction->detail->x86.operands[0].mem.disp > -0x30)
+            return false;
+
+        if (PtrToInstruction->detail->x86.operands[1].type != X86_OP_IMM)
+            return false;
+
+        uint8_t* PtrToImm = 
+            PtrToInstruction->bytes + 
+            PtrToInstruction->detail->x86.encoding.imm_offset;
+        uint8_t ImmSize = 
+            PtrToInstruction->detail->x86.encoding.imm_size;
+
+        // each bytes of ImmValue must be printable;
+        return Helper::IsPrintable(PtrToImm, ImmSize);
+    } else if (_stricmp(PtrToInstruction->mnemonic, "push") == 0) {
+        if (PtrToInstruction->detail->x86.operands[0].type != X86_OP_IMM)
+            return false;
+
+        {   // test if match pattern 2
+            if (Helper::IsPrintable(PtrToInstruction->bytes + PtrToInstruction->detail->x86.encoding.imm_offset,
+                                    PtrToInstruction->detail->x86.encoding.imm_size))
+                return true;
+        }
+
+        {   // test if match pattern 3
+            auto StringRva = static_cast<uintptr_t>(
+                PtrToInstruction->detail->x86.operands[0].imm -
+                _TargetFile.GetImageNTHeaders()->OptionalHeader.ImageBase
+            );
+
+            auto PtrToString = _TargetFile.RvaToPointer<uint8_t>(StringRva);
+
+            if (PtrToString) {
+                auto StringLength = strlen(reinterpret_cast<char*>(PtrToString));
+
+                if (StringLength && Helper::IsPrintable(PtrToString, StringLength))
+                    return true;
+            }
+        }
+
+        return false;
+    } else {
+        return false;
+    }
+}
+#endif
+
+#if defined(_M_AMD64)
 bool PatchSolution3::CheckIfFound(cs_insn* PtrToInstruction, size_t i) const {
+    auto& op_count = PtrToInstruction->detail->x86.op_count;
+    auto& operands = PtrToInstruction->detail->x86.operands;
+
     if (PtrToInstruction->detail->x86.op_count != 2)
         return false;
     
-    if (PtrToInstruction->detail->x86.operands[1].type == X86_OP_IMM) {
-        if (Keywords[i].Type != IMM_DATA)
-            return false;
-
-        uint64_t ImmValue = PtrToInstruction->detail->x86.operands[1].imm;
+    if (Keywords[i].Type == IMM_DATA && operands[1].type == X86_OP_IMM) {
+        uint64_t ImmValue = operands[1].imm;
         uint8_t ImmSize = PtrToInstruction->detail->x86.encoding.imm_size;
         return
-            ImmValue == *reinterpret_cast<const uint64_t*>(Keywords[i].Data) && 
+            memcmp(&ImmValue, Keywords[i].Data, sizeof(uint64_t)) == 0 &&
             ImmSize == Keywords[i].Length;
-    } else if (PtrToInstruction->detail->x86.operands[1].type == X86_OP_MEM) {
-        if (Keywords[i].Type != STRING_DATA)
-            return false;
-
+    } else if (Keywords[i].Type == STRING_DATA && operands[1].type == X86_OP_MEM) {
         auto StringRva = static_cast<uintptr_t>(
             PtrToInstruction->address + PtrToInstruction->size +    // RIP
             PtrToInstruction->detail->x86.operands[1].mem.disp
@@ -244,16 +289,47 @@ bool PatchSolution3::CheckIfFound(cs_insn* PtrToInstruction, size_t i) const {
 
         auto PtrToString = _TargetFile.RvaToPointer<char>(StringRva);
 
-        return
-            strncmp(PtrToString,
-                    reinterpret_cast<const char*>(Keywords[i].Data),
-                    Keywords[i].Length) == 0 &&
+        return 
+            PtrToString &&
+            strncmp(PtrToString, reinterpret_cast<const char*>(Keywords[i].Data), Keywords[i].Length) == 0 &&
             PtrToString[Keywords[i].Length] == '\x00';
     } else {
         return false;
     }
 }
+#else
+bool PatchSolution3::CheckIfFound(cs_insn* PtrToInstruction, size_t i) const {
+    auto& op_count = PtrToInstruction->detail->x86.op_count;
+    auto& operands = PtrToInstruction->detail->x86.operands;
 
+    if (op_count < 1 || operands[op_count - 1].type != X86_OP_IMM)
+        return false;
+
+    if (Keywords[i].Type == IMM_DATA) {
+        uint64_t ImmValue = operands[op_count - 1].imm;
+        uint8_t ImmSize = PtrToInstruction->detail->x86.encoding.imm_size;
+        return 
+            memcmp(&ImmValue, Keywords[i].Data, sizeof(uint64_t)) == 0 && 
+            ImmSize == Keywords[i].Length;
+    } else if (Keywords[i].Type == STRING_DATA) {
+        auto StringRva = static_cast<uintptr_t>(
+            operands[op_count - 1].imm - 
+            _TargetFile.GetImageNTHeaders()->OptionalHeader.ImageBase
+        );
+
+        auto PtrToString = _TargetFile.RvaToPointer<char>(StringRva);
+
+        return 
+            PtrToString &&
+            strncmp(PtrToString, reinterpret_cast<const char*>(Keywords[i].Data), Keywords[i].Length) == 0 &&
+            PtrToString[Keywords[i].Length] == '\x00';
+    } else {
+        return false;
+    }
+}
+#endif
+
+#if defined(_M_AMD64)
 PatchSolution3::PatchPointInfo 
 PatchSolution3::CreatePatchPoint(const uint8_t* PtrToCode, 
                                  cs_insn* PtrToInstruction, 
@@ -292,6 +368,46 @@ PatchSolution3::CreatePatchPoint(const uint8_t* PtrToCode,
 
     return result;
 }
+#else       // for i386
+PatchSolution3::PatchPointInfo
+PatchSolution3::CreatePatchPoint(const uint8_t* PtrToCode,
+                                 cs_insn* PtrToInstruction,
+                                 size_t i) const {
+    PatchPointInfo result;
+
+    result.PtrToRelativeCode = const_cast<uint8_t*>(PtrToCode);
+    result.RelativeCodeRVA = PtrToInstruction->address;
+
+    if (Keywords[i].Type == IMM_DATA) {
+        result.PtrToPatch = result.PtrToRelativeCode + PtrToInstruction->detail->x86.encoding.imm_offset;
+        result.PatchSize = PtrToInstruction->detail->x86.encoding.imm_size;
+        result.PtrToOriginalString = nullptr;
+    } else {
+        auto StringRva = static_cast<uintptr_t>(
+            PtrToInstruction->detail->x86.operands[0].imm - 
+            _TargetFile.GetImageNTHeaders()->OptionalHeader.ImageBase
+        );
+
+        auto PtrToString = _TargetFile.RvaToPointer<char>(StringRva);
+
+        result.PtrToOriginalString = PtrToString;
+
+        if (Keywords[i].NotRecommendedToModify == false) {
+            result.PtrToPatch = reinterpret_cast<uint8_t*>(result.PtrToOriginalString);
+            result.PatchSize = Keywords[i].Length;
+        } else {
+            result.PtrToPatch =
+                result.PtrToRelativeCode + PtrToInstruction->detail->x86.encoding.imm_offset;
+            result.PatchSize =
+                PtrToInstruction->detail->x86.encoding.imm_size;
+        }
+    }
+
+    result.PtrToReplaceString = nullptr;
+
+    return result;
+}
+#endif
 
 PatchSolution3::BranchContext
 PatchSolution3::GetJumpedBranch(const BranchContext& NotJumpedBranch,
@@ -307,7 +423,7 @@ PatchSolution3::GetJumpedBranch(const BranchContext& NotJumpedBranch,
     JumpedBranch.SizeOfCode = 
         NotJumpedBranch.SizeOfCode - (JumpedBranch.PtrOfCode - NotJumpedBranch.PtrOfCode);
 
-    JumpedBranch.Rip = PtrToJmpInstruction->detail->x86.operands[0].imm;
+    JumpedBranch.REG_IP = PtrToJmpInstruction->detail->x86.operands[0].imm;
 
     if (JumpedBranch.PtrOfCode)
         return JumpedBranch;
@@ -338,7 +454,7 @@ PatchSolution3::HandleJcc(const BranchContext& A,
         int WeightBPrev = WeightB;
 
         // process branch A 
-        while (cs_disasm_iter(_CapstoneHandle, &BranchA.PtrOfCode, &BranchA.SizeOfCode, &BranchA.Rip, PtrToInstruction)) {
+        while (cs_disasm_iter(_CapstoneHandle, &BranchA.PtrOfCode, &BranchA.SizeOfCode, &BranchA.REG_IP, PtrToInstruction)) {
             // For all x86 mnemonics, only 'jcc' or 'jmp' starts with 'j' or 'J'.
             // So it should be a new branch if we meet them.
             if (PtrToInstruction->mnemonic[0] == 'j' || PtrToInstruction->mnemonic[0] == 'J') {
@@ -353,8 +469,10 @@ PatchSolution3::HandleJcc(const BranchContext& A,
                     if (BranchA.PtrOfCode == nullptr)
                         break;
                 }
+            } else if (_stricmp(PtrToInstruction->mnemonic, "ret") == 0) {
+                return B;
             } else {
-                if (CheckIfMatchPattern(PtrToInstruction, i) == false)
+                if (CheckIfMatchPattern(PtrToInstruction) == false)
                     continue;
 
                 // if match pattern, but keyword doesn't match, 
@@ -370,7 +488,7 @@ PatchSolution3::HandleJcc(const BranchContext& A,
         }
 
         // process B branch
-        while (cs_disasm_iter(_CapstoneHandle, &BranchB.PtrOfCode, &BranchB.SizeOfCode, &BranchB.Rip, PtrToInstruction)) {
+        while (cs_disasm_iter(_CapstoneHandle, &BranchB.PtrOfCode, &BranchB.SizeOfCode, &BranchB.REG_IP, PtrToInstruction)) {
             // For all x86 mnemonics, only 'jcc' or 'jmp' starts with 'j' or 'J'.
             // So it should be a new branch if we meet them.
             if (PtrToInstruction->mnemonic[0] == 'j' || PtrToInstruction->mnemonic[0] == 'J') {
@@ -385,8 +503,10 @@ PatchSolution3::HandleJcc(const BranchContext& A,
                     if (BranchB.PtrOfCode == nullptr)
                         break;
                 }
+            } else if (_stricmp(PtrToInstruction->mnemonic, "ret") == 0) {
+                return A;
             } else {
-                if (CheckIfMatchPattern(PtrToInstruction, i) == false)
+                if (CheckIfMatchPattern(PtrToInstruction) == false)
                     continue;
 
                 if (CheckIfFound(PtrToInstruction, i) == false)
@@ -421,14 +541,21 @@ bool PatchSolution3::FindPatchOffset() noexcept {
     for (DWORD i = 0; i < pSectionHdrOftext->SizeOfRawData; ++i) {
         const uint32_t Hint = 0x6b67424e;
         if (*reinterpret_cast<uint32_t*>(pSectionOftext + i) == Hint) {
-
+#if defined(_M_AMD64)
             static const uint8_t BeginBytesOfTargetFunction[] = {
                 0x40, 0x55,                                         // push    rbp
                 0x48, 0x8D, 0xAC, 0x24, 0x70, 0xBC, 0xFF, 0xFF,     // lea     rbp, [rsp-4390h]
                 0xB8, 0x90, 0x44, 0x00, 0x00                        // mov     eax, 4490h
             };
-            
             for (DWORD j = i - 0x250; j < i; ++j) {
+#else
+            static const uint8_t BeginBytesOfTargetFunction[] = {
+                0x55,           // push    ebp
+                0x8B, 0xEC,     // mov     ebp, esp
+                0x6A, 0xFF      // push    0xffffffff
+            };
+            for (DWORD j = i - 0x1B0; j < i; ++j) {
+#endif
                 if (memcmp(pSectionOftext + j,
                            BeginBytesOfTargetFunction,
                            sizeof(BeginBytesOfTargetFunction)) == 0) {
@@ -450,8 +577,12 @@ bool PatchSolution3::FindPatchOffset() noexcept {
         BranchContext CurrentBranchPrevInstruction;
         BranchContext CurrentBranch;
         CurrentBranch.PtrOfCode = pSectionOftext + TargetFunctionOffset;
+#if defined(_M_AMD64)
         CurrentBranch.SizeOfCode = 0xcd03;
-        CurrentBranch.Rip = pSectionHdrOftext->VirtualAddress + TargetFunctionOffset;
+#else
+        CurrentBranch.SizeOfCode = 0x9014;
+#endif
+        CurrentBranch.REG_IP = pSectionHdrOftext->VirtualAddress + TargetFunctionOffset;
 
         ResourceGuard<CapstoneMallocTraits<cs_insn>> InstructionObj(cs_malloc(_CapstoneHandle));
         cs_insn* PtrToInstruction = InstructionObj.GetHandle();
@@ -460,7 +591,7 @@ bool PatchSolution3::FindPatchOffset() noexcept {
                 cs_disasm_iter(_CapstoneHandle,
                                &CurrentBranch.PtrOfCode, 
                                &CurrentBranch.SizeOfCode, 
-                               &CurrentBranch.Rip, PtrToInstruction))) {
+                               &CurrentBranch.REG_IP, PtrToInstruction))) {
 
             if (PtrToInstruction->mnemonic[0] == 'j' || PtrToInstruction->mnemonic[0] == 'J') {
                 BranchContext JumpedBranch = GetJumpedBranch(CurrentBranch, PtrToInstruction);
@@ -474,8 +605,10 @@ bool PatchSolution3::FindPatchOffset() noexcept {
                     if (CurrentBranch.PtrOfCode == nullptr)
                         return false;
                 }
+            } else if (_stricmp(PtrToInstruction->mnemonic, "ret") == 0) {
+                return false;
             } else {
-                if (CheckIfMatchPattern(PtrToInstruction, KeywordIndex) == false)
+                if (CheckIfMatchPattern(PtrToInstruction) == false)
                     continue;
 
                 if (CheckIfFound(PtrToInstruction, KeywordIndex) == false)
@@ -567,7 +700,7 @@ bool PatchSolution3::CheckKey(RSACipher* pCipher) const {
 
                 uintptr_t Rva =
                     pSectionHdrOfrdata->VirtualAddress +
-                    (_Patches[i].PtrToOriginalString - pSectionOfrdata) +   // pOriginalStrin Rva
+                    (_Patches[i].PtrToOriginalString - pSectionOfrdata) +   // OriginalString Rva
                     offset;
 
                 if (_TargetFile.IsRvaRangeInRelocationTable(Rva, Keywords[i].Length + 1) == false)

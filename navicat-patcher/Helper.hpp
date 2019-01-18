@@ -65,5 +65,6 @@ namespace Helper {
     std::string ConvertToUTF8(PCSTR From, DWORD CodePage = CP_ACP);
     std::string ConvertToUTF8(PCWSTR From);
 
+    bool IsPrintable(const uint8_t* p, size_t s);
 }
 
