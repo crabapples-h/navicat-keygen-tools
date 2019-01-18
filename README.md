@@ -10,7 +10,7 @@ This repository will tell you how Navicat offline activation works.
 
 1. Download the latest release [from here](https://github.com/DoubleLabyrinth/navicat-keygen/releases).
 
-2. Use `navicat-patcher.exe` to replace __Navicat Activation Public Key__ that is stored in `navicat.exe` and `libcc.dll`.
+2. Use `navicat-patcher.exe` to replace __Navicat Activation Public Key__ that is stored in `navicat.exe` or `libcc.dll`.
    
    ```
    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]
@@ -27,62 +27,74 @@ This repository will tell you how Navicat offline activation works.
    __Example: (in cmd.exe)__ 
 
    ```
-   navicat-patcher.exe "C:\Program Files\PremiumSoft\Navicat Premium 12" .\RegPrivateKey.pem
+   navicat-patcher.exe "C:\Program Files\PremiumSoft\Navicat Premium 12"
    ```
    
-   It has been tested on __Navicat Premium 12.1.11 Simplified Chinese version__. The following is an example of output.
+   It has been tested on __Navicat Premium 12.1.12 Simplified Chinese version__. The following is an example of output.
 
    ```
-   MESSAGE: Navicat.exe has been found.
-   MESSAGE: libcc.dll has been found.
+   ***************************************************
+   *       Navicat Patcher by @DoubleLabyrinth       *
+   *           Release date: Jan 19 2019             *
+   ***************************************************
 
-   MESSAGE: [Solution0] Keyword has been found: offset = +0x029a4b9c.
-   MESSAGE: [Solution1] Keywords[0] has been found: offset = +0x02294960.
-   MESSAGE: [Solution1] Keywords[1] has been found: offset = +0x0074bd29.
-   MESSAGE: [Solution1] Keywords[2] has been found: offset = +0x02294670.
-   MESSAGE: [Solution1] Keywords[3] has been found: offset = +0x0074bd0f.
-   MESSAGE: [Solution1] Keywords[4] has been found: offset = +0x02294664.
-   MESSAGE: [Solution2] Keywords[0] has been found: offset = +0x01643118.
-   MESSAGE: [Solution2] Keywords[1] has been found: offset = +0x016437c1.
-   MESSAGE: [Solution2] Keywords[2] has been found: offset = +0x01643ed0.
-   MESSAGE: [Solution2] Keywords[3] has been found: offset = +0x016445df.
-   MESSAGE: [Solution2] Keywords[4] has been found: offset = +0x01644cee.
-   MESSAGE: [Solution2] Keywords[5] has been found: offset = +0x016453fd.
-   MESSAGE: [Solution2] Keywords[6] has been found: offset = +0x01645b0b.
-   MESSAGE: [Solution2] Keywords[7] has been found: offset = +0x01646217.
-   MESSAGE: [Solution2] Keywords[8] has been found: offset = +0x01646926.
-   MESSAGE: [Solution2] Keywords[9] has been found: offset = +0x01647035.
+   Press Enter to continue or Ctrl + C to abort.
+
+   MESSAGE: [PatchSolution3] Keywords[0] has been found:
+            Relative Machine Code Offset = +0x0000000001644a08
+            Relative Machine Code RVA    = +0x0000000001645608
+            Patch Offset                 = +0x00000000023d56e4
+            Patch Size                   = 3 byte(s)
+   MESSAGE: [PatchSolution3] Keywords[1] has been found:
+            Relative Machine Code Offset = +0x0000000001644a5f
+            Relative Machine Code RVA    = +0x000000000164565f
+            Patch Offset                 = +0x0000000001644a63
+            Patch Size                   = 2 byte(s)
    ...
    ...
+   ...
+   MESSAGE: [PatchSolution3] Keywords[109] has been found:
+            Relative Machine Code Offset = +0x0000000001651558
+            Relative Machine Code RVA    = +0x0000000001652158
+            Patch Offset                 = +0x000000000165155c
+            Patch Size                   = 2 byte(s)
+   MESSAGE: [PatchSolution3] Keywords[110] has been found:
+            Relative Machine Code Offset = +0x000000000165155e
+            Relative Machine Code RVA    = +0x000000000165215e
+            Patch Offset                 = +0x0000000001651561
+            Patch Size                   = 1 byte(s)
+   MESSAGE: Generating new RSA private key, it may take a long time.
+   MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.
 
    Your RSA public key:
    -----BEGIN PUBLIC KEY-----
-   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtOZGsX7UoDPuxCfEuw4i
-   yWDASpwaN19GaPNrTlWz6K7MKXGrAQpYD5gNZ8nGdfRgp52TErTHSNoRjgfpxGqK
-   ApPUISsIanGMcyf/H2b8pGuz1oF19kVKSyZTPaVLbE+1Cw7FULbI04bc64XnWSHo
-   aQAXrYKGpC7oDomRGMtx28figu3AHAk1UQrcCvE3+0ITTA7X8xaRwz6+gb+uLgCd
-   iXyRYDodG8i+kk1YIt3f2mt7jH+uEHqBYjIfvvo6g5MZz4KNz7Ewc6+sDyO8bmlX
-   eFnHo6YAgCcaHVvVtGNCxCd1O5wWHvUN985HHQYnFr7qzJaL9cPb735pP2hb0IXe
-   ywIDAQAB
+   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxnosIMaINNalTS93BgGF
+   dcbodlk3X2PVuPl+HZuYLLfrGPfzgtfXKzM7RzEuJOX9ozs4lyiB298ImnS/fa4g
+   xHKJBvdk11PgD3mSTU6+PwIR45ud5RcbsuwnjVUEpXkth+9tjaxiNNtaDH5af4+z
+   /ExWeRLH/8lnNMhC5wndvPhw2gbrypAD1VvBPj0LG7Ktmt1Sqx25aBdikp/uEPvn
+   eXQgOgH7H+L8id8RtKItI+ZSwojaDWu9ROpvVejlA7W4ceZlNVeGCSqIieL7MUpm
+   DpRmLgBBoXrZgQTyG1Z9RjXD3+Q361z2RvfZZcsnMxfMA04NRscoqlG7eC2JW5JN
+   swIDAQAB
    -----END PUBLIC KEY-----
 
+   @ +023d56e4: 4D 49 49 ---> 4D 49 49
+   @ +01644a63: 42 49 ---> 42 49
+   @ +01644a68: 6A ---> 6A
+   @ +01644ace: 41 ---> 41
+   @ +01644b28: 4E 42 67 6B ---> 4E 42 67 6B
+   @ +01644b32: 71 ---> 71
+   @ +023d56e8: 68 6B 69 47 39 77 ---> 68 6B 69 47 39 77
+   ...
+   ...
+   ...
+   @ +023d58d0: 37 73 57 ---> 71 6C 47
+   @ +023d58d4: 36 63 6A ---> 37 65 43
+   @ +023d58d8: 78 6C 6A 75 75 51 61 ---> 32 4A 57 35 4A 4E 73
+   @ +023d58e8: 77 49 44 41 ---> 77 49 44 41
+   @ +0165155c: 51 41 ---> 51 41
+   @ +01651561: 42 ---> 42
 
-   MESSAGE: Navicat.exe has been backed up successfully.
-   MESSAGE: libcc.dll has been backed up successfully.
-
-   ......
-   ......
-   ......
-   @+0x016ED490: 83 F0 49 --> 83 F0 49
-   @+0x016EDB9F: 83 F0 44 --> 83 F0 44
-   @+0x016EE2AE: 83 F0 41 --> 83 F0 41
-   @+0x016EE9BD: 83 F0 51 --> 83 F0 51
-   @+0x016EF0CB: 83 F0 41 --> 83 F0 41
-   @+0x016EF7D7: 83 F0 42 --> 83 F0 42
-
-   Solution0 has been done successfully.
-   Solution1 has been done successfully.
-   Solution2 has been done successfully.
+   MESSAGE: Patch has been done successfully.
    ```
 
 3. Then use `navicat-keygen.exe` to generate __snKey__ and __Activation Code__
@@ -148,7 +160,7 @@ This repository will tell you how Navicat offline activation works.
    (Input major version number, range: 0 ~ 15, default: 12)> 12
 
    Serial number:
-   NAVA-DHCN-P2OI-DV46
+   NAVO-2ORP-IN5A-GQEE
 
    Your name: 
    ```
@@ -157,7 +169,7 @@ This repository will tell you how Navicat offline activation works.
      
    Then you will be asked to input `Your name` and `Your organization`. Just set them whatever you want, but not too long.
 
-   ```bash
+   ```
    Your name: DoubleLabyrinth
    Your organization: DoubleLabyrinth
    Input request code (in Base64), input empty line to end:
@@ -171,30 +183,26 @@ This repository will tell you how Navicat offline activation works.
 
 6. Copy your request code and paste it in the keygen. Input empty line to tell the keygen that your input ends.
 
-   ```bash
+   ```
    Your name: DoubleLabyrinth
    Your organization: DoubleLabyrinth
 
    Input request code (in Base64), input empty line to end:
-   q/cv0bkTrG1YDkS+fajFdi85bwNVBD/lc5jBYJPOSS5bfl4DdtnfXo+RRxdMjJtEcYQnvLPi2LF0
-   OB464brX9dqU29/O+A3qstSyhBq5//iezxfu2Maqca4y0rVtZgQSpEnZ0lBNlqKXv7CuTUYCS1pm
-   tEPgwJysQTMUZf7tu5MR0cQ+hY/AlyQ9iKrQAMhHklqZslaisi8VsnoIqH56vfTyyUwUQXrFNc41
-   qG5zZNsXu/NI79JOo7qTvcFHQT/k5cTadbKTxY+9c5eh+nF3JR7zEa2BDDfdQRLNvy4DTSyxdYXd
-   sAk/YPU+JdWI+8ELaa0SuAuNzr5fEkD6NDSG2A==
+   t2U+0yfE2FfnbjyhCXa0lglZOHu9Ntc3qyGiPbR6xb1QoU63/9BVfdaCq0blwVycXPyT/Vqw5joIKdM5oCRR/afCPM7iRcyhQMAnvqwc+AOKCqayVV+SqKLvtR/AbREI12w++PQ6Ewfs4A8PgB8OJ9G0jKt6Q/iJRblqi2WWw9mwy+YHcYYh3UAfygTnyj/xl+MzRymbY0lkus+6LPtpDecVsFFhM7F32Ee1QPwISko7bAkHOtkt+joPfYDdn9PDGZ4HEmeLvH6UqZCXkzgaAfynB7cQZFEkId8FsW2NGkbpM7wB2Hi3fNFgOIjutTprixTdbpFKn4w6gGc28ve23A==
 
    Request Info:
-   {"K":"NAVADHCNP2OIDV46", "DI":"Y2eJk9vrvfGudPG7Mbdn", "P":"WIN 8"}
+   {"K":"NAVO2ORPIN5AGQEE", "DI":"R91j6WyMhxHznAKSxxxx", "P":"WIN"}
 
    Response Info:
-   {"K":"NAVADHCNP2OIDV46","DI":"Y2eJk9vrvfGudPG7Mbdn","N":"DoubleLabyrinth","O":"DoubleLabyrinth","T":1537630251}
+   {"K":"NAVO2ORPIN5AGQEE","DI":"R91j6WyMhxHznAKSxxxx","N":"DoubleLabyrinth","O":"DoubleLabyrinth","T":1547826060}
 
    License:
-   oyoMYr9cfVGXeT7F1dqBwHsB/vvWj6SUL6aR+Kzb0lm5IyEj1CgovuSq+qMzFfx+
-   oHMFaGKFg6viOY2hfJcrO2Vdq0hXZS/B/Ie3jBS2Ov37v8e3ufVajaH+wLkmEpLd
-   xppCVLkDQjIHYR2IPz5s/L/RuWqDpEY4TPmGFF6q+xQMnqQA3vXPyG+JYMARXLru
-   Y1gCDLN30v3DpyOeqKmFjUqiHK5h8s0NYiH2OpMyaCpi12JsF23miP89ldQp3+SJ
-   8moo0cNGy7sFp2gX9ol2zVoo7qxfYlLl03f7CALJ6im0sx4yBsmlzFDdvpQUbXk8
-   YZ5rT4LML2Fx6Wgnnklb5g==
+   lRF18o+ZhBphyN0U5kFLHtAAGGXuvhqOcxNuvAk4dJcGeR0ISuw74mQvAfdNjv0T
+   I5NZFzqIJvrzM0XeR88q+3kmZkECuxwwWHP3zzDPhPiylcTV4DoGZ1tfoViUSYQc
+   LgXG0Fl7koZeP61YOKQ8GfX+Xk2ZTM64bYaF7NlhonM+GQUJCCF2JThmrP921t2p
+   b/E5pV6fLOYMM13881ZQcQcltMNVDZn4lzgzKRFFxCQFaTl6fJMHZdYVmICQTHtI
+   sNaym0zduc8/cv34mgJ+7NseXmsEPCdjrZ59wgfPsLhZLXqtfxi5hGWw4NMa3Sb2
+   UI8dzqFzRp/hSDEM0mEqiA==
    ```
 
 7. Finally, you will get __Activation Code__ which looks like a Base64 string. Just copy it and paste it in Navicat `Manual Activation` window, then click `Activate`. If nothing wrong, activation should be done successfully.
