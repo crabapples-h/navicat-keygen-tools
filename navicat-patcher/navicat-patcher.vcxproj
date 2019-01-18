@@ -205,7 +205,7 @@
     <ClInclude Include="ExceptionSystem.hpp" />
     <ClInclude Include="FileMapper.hpp" />
     <ClInclude Include="Helper.hpp" />
-    <ClInclude Include="ImageHelper.hpp" />
+    <ClInclude Include="ImageInterpreter.hpp" />
     <ClInclude Include="NavicatCrypto.hpp" />
     <ClInclude Include="PatchSolution.hpp" />
     <ClInclude Include="ResourceGuard.hpp" />

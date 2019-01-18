@@ -53,9 +53,6 @@
     <ClInclude Include="Helper.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ImageHelper.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="ExceptionOpenssl.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -66,6 +63,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ExceptionCapstone.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageInterpreter.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

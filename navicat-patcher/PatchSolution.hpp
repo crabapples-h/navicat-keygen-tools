@@ -6,6 +6,8 @@
 #include "ExceptionCapstone.hpp"
 #include "ResourceGuardCapstone.hpp"
 
+#include "ImageInterpreter.hpp"
+
 // lib required by capstone
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 #pragma comment(lib, "capstone_static.lib")
@@ -15,7 +17,7 @@
 
 class PatchSolution{
 public:
-    virtual void SetFile(FileMapper* pLibccFile) noexcept = 0;
+    virtual void SetFile(FileMapper* pLibccFile) = 0;
     virtual bool CheckKey(RSACipher* pCipher) const = 0;
     virtual bool FindPatchOffset() noexcept = 0;
     virtual void MakePatch(RSACipher* pCipher) const = 0;
@@ -30,44 +32,56 @@ private:
     };
 
     struct KeywordType {
-        uint8_t data[8];
-        size_t length;
-        KeywordDataType type;
+        uint8_t Data[8];
+        size_t Length;
+        KeywordDataType Type;
         bool NotRecommendedToModify;
     };
 
-    struct BranchType {
+    struct BranchContext {
         const uint8_t* PtrOfCode;
         size_t SizeOfCode;
         uint64_t Rip;
     };
 
-    struct PatchPointType {
+    struct PatchPointInfo {
         uint8_t* PtrToRelativeCode;
         uint64_t RelativeCodeRVA;
         uint8_t* PtrToPatch;
         size_t PatchSize;
-        char* pOriginalString;
-        char* pReplaceString;
+        char* PtrToOriginalString;
+        char* PtrToReplaceString;
     };
 
     static constexpr size_t KeywordsCount = 111;
     static const KeywordType Keywords[KeywordsCount];
 
     ResourceGuard<CapstoneHandleTraits> _CapstoneHandle;
-    FileMapper* _pTargetFile;
-    mutable PatchPointType _Patches[KeywordsCount];
+    ImageInterpreter _TargetFile;
+    mutable PatchPointInfo _Patches[KeywordsCount];
 
-    bool CheckIfMatchPattern(cs_insn* pInstruction) const;
-    bool CheckIfFound(cs_insn* pInstruction, size_t KeywordIndex) const;
-    BranchType GetAnotherBranch(const BranchType& A, cs_insn* pInstruction) const;
-    BranchType JudgeBranch(const BranchType A, const BranchType B, size_t CurrentKeywordIndex) const;
+    bool CheckIfMatchPattern(cs_insn* pInstruction, size_t i) const;
+    bool CheckIfFound(cs_insn* PtrToInstruction, size_t i) const;
+
+    PatchPointInfo CreatePatchPoint(const uint8_t* PtrToCode, 
+                                    cs_insn* PtrToInstruction, 
+                                    size_t i) const;
+
+    BranchContext GetJumpedBranch(const BranchContext& NotJumpedBranch,
+                                  cs_insn* PtrToJmpInstruction) const;
+
+    BranchContext HandleJcc(const BranchContext& NotJumpedBranch,
+                            const BranchContext& JumpedBranch,
+                            size_t i) const;
 public:
 
     PatchSolution3();
 
-    virtual void SetFile(FileMapper* pLibccFile) noexcept override {
-        _pTargetFile = pLibccFile;
+    virtual void SetFile(FileMapper* pLibccFile) override {
+        if (!_TargetFile.ParseImage(pLibccFile->GetView<PVOID>())) {
+            throw Exception(__BASE_FILE__, __LINE__, 
+                            "Invalid PE file.");
+        }
     }
     
     virtual bool FindPatchOffset() noexcept override;
