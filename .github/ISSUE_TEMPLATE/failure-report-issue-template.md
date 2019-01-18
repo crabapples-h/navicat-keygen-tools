@@ -18,26 +18,29 @@ If you still meet a failure, you can submit a failure report and please fill in 
    - [ ] Navicat Report Viewer
    - [ ] Other, please write here: ______
 
-2. What is your Navicat language version? Check one of the following:
+2. What's your Navicat version number?
+   Please write here: ______
+
+3. What is your Navicat language version? Check one of the following:
    - [ ] English
    - [ ] Simplified Chinese
    - [ ] Traditional Chinese
    - [ ] Other, please write here: ______
 
-3. What is your OS? Check one of the following:
+4. What is your OS? Check one of the following:
    - [ ] Windows
    - [ ] macOS
    - [ ] Linux
 
-4. Can you post console output here? If don't have, leave it empty.
+5. Can you post console output here? If don't have, leave it empty.
 ```
 Please post here
 ```
 
-5. If __Request Code__ or __Activation Code__ is shown, please post the content of `RegPrivateKey.pem` here:
+6. If __Request Code__ or __Activation Code__ is shown, please post the content of `RegPrivateKey.pem` here:
 ```
 Please post here
 ```
 
-6. If you have other information to provide, please write here.
+7. If you have other information to provide, please write here.
    (If you don't have, leave it empty.)
