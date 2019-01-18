@@ -28,6 +28,91 @@ public:
     virtual ~PatchSolution() {}
 };
 
+// PatchSolution0 will replace the RSA public key stored in main application.
+class PatchSolution0 : public PatchSolution {
+private:
+    static const char Keyword[461];
+    static constexpr size_t KeywordLength = 460;
+
+    ImageInterpreter _TargetFile;
+    off_t PatchOffset;
+public:
+
+    PatchSolution0() :
+        PatchOffset(-1) {}
+
+    virtual void SetFile(FileMapper* pMainApp) override {
+        if (!_TargetFile.ParseImage(pMainApp->GetView<PVOID>(), true)) {
+            throw Exception(__BASE_FILE__, __LINE__,
+                            "Invalid PE file.");
+        }
+    }
+
+    virtual bool CheckKey(RSACipher* pCipher) const override;
+
+    // Return true if found, other return false
+    virtual bool FindPatchOffset() noexcept override;
+
+    // Make a patch based on an RSA private key given
+    // Return true if success, otherwise return false
+    virtual void MakePatch(RSACipher* cipher) const override;
+};
+
+// PatchSolution1 will replace the RSA public key stored in libcc.dll
+class PatchSolution1 : public PatchSolution {
+private:
+    static const char* Keywords[5];
+    static const size_t KeywordsLength[5];
+
+    ImageInterpreter _TargetFile;
+    off_t PatchOffsets[5];
+public:
+    PatchSolution1() :
+        PatchOffsets{ -1, -1, -1, -1, -1 } {}
+
+    virtual void SetFile(FileMapper* pLibccFile) override {
+        if (!_TargetFile.ParseImage(pLibccFile->GetView<PVOID>(), true)) {
+            throw Exception(__BASE_FILE__, __LINE__,
+                            "Invalid PE file.");
+        }
+    }
+
+    virtual bool CheckKey(RSACipher* cipher) const override;
+
+    virtual bool FindPatchOffset() noexcept override;
+
+    virtual void MakePatch(RSACipher* cipher) const override;
+};
+
+class PatchSolution2 : public PatchSolution {
+private:
+    static constexpr size_t KeywordsCount = 0x188;
+    static const char KeywordsMeta[KeywordsCount + 1];
+    static uint8_t Keywords[KeywordsCount][5];
+
+    ImageInterpreter _TargetFile;
+    off_t PatchOffsets[KeywordsCount];
+
+    void BuildKeywords() noexcept;
+public:
+    PatchSolution2() {
+        memset(PatchOffsets, -1, sizeof(PatchOffsets));
+    }
+
+    virtual void SetFile(FileMapper* pLibccFile) override {
+        if (!_TargetFile.ParseImage(pLibccFile->GetView<PVOID>(), true)) {
+            throw Exception(__BASE_FILE__, __LINE__,
+                            "Invalid PE file.");
+        }
+    }
+
+    virtual bool CheckKey(RSACipher* pCipher) const override;
+
+    virtual bool FindPatchOffset() noexcept override;
+
+    virtual void MakePatch(RSACipher* pCipher) const override;
+};
+
 class PatchSolution3 : public PatchSolution {
 private:
     enum KeywordDataType {

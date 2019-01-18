@@ -3,7 +3,7 @@
 #include "Helper.hpp"
 
 #undef __BASE_FILE__
-#define __BASE_FILE__ "PatchSolution.cpp"
+#define __BASE_FILE__ "PatchSolution3.cpp"
 
 // ----------- avoid link error caused by capstone_static.lib
 #define stdin  (__acrt_iob_func(0))
@@ -705,6 +705,8 @@ bool PatchSolution3::CheckKey(RSACipher* pCipher) const {
 
                 if (_TargetFile.IsRvaRangeInRelocationTable(Rva, Keywords[i].Length + 1) == false)
                     break;
+                else
+                    ++offset;
             }
 
             _Patches[i].PtrToReplaceString = _Patches[i].PtrToOriginalString + offset;

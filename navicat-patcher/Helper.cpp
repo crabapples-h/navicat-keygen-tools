@@ -8,7 +8,7 @@
 
 namespace Helper {
 
-    static Navicat11Crypto NavicatCipher("23970790", 8);
+    Navicat11Crypto NavicatCipher("23970790", 8);
 
     std::string ConvertToUTF8(PCSTR From, DWORD CodePage) {
         std::string result;
@@ -194,5 +194,18 @@ namespace Helper {
             if (isprint(p[i]) == false)
                 return false;
         return true;
+    }
+
+    void ReplaceSubString(std::string& Str, 
+                          const std::string& OldSubStr, 
+                          const std::string& NewSubStr) {
+        std::string::size_type pos = 0;
+        std::string::size_type srclen = OldSubStr.size();
+        std::string::size_type dstlen = NewSubStr.size();
+
+        while ((pos = Str.find(OldSubStr, pos)) != std::string::npos) {
+            Str.replace(pos, srclen, NewSubStr);
+            pos += dstlen;
+        }
     }
 }

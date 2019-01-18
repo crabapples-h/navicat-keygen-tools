@@ -195,6 +195,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Helper.cpp" />
+    <ClCompile Include="PatchSolution0.cpp" />
+    <ClCompile Include="PatchSolution1.cpp" />
+    <ClCompile Include="PatchSolution2.cpp" />
     <ClCompile Include="_tmain.cpp" />
     <ClCompile Include="PatchSolution3.cpp" />
   </ItemGroup>

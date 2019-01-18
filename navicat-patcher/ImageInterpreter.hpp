@@ -15,7 +15,7 @@ private:
     std::map<uintptr_t, size_t> _RelocationAddressTable;
 public:
 
-    bool ParseImage(const PVOID PtrToImageBase) {
+    bool ParseImage(const PVOID PtrToImageBase, bool DisableRelocParsing = false) {
         if (PtrToImageBase == nullptr)
             return false;
 
@@ -65,7 +65,8 @@ public:
             SectioMapAddressTable[SectionMapAddress] = i;
         }
 
-        if (PtrToNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress != 0) {
+        if (DisableRelocParsing == false && 
+            PtrToNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress != 0) {
             DWORD RelocTableRva = 
                 PtrToNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress;
             PIMAGE_BASE_RELOCATION PtrToRelocTable = nullptr;

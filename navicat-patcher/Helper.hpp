@@ -66,5 +66,9 @@ namespace Helper {
     std::string ConvertToUTF8(PCWSTR From);
 
     bool IsPrintable(const uint8_t* p, size_t s);
+
+    void ReplaceSubString(std::string& Str,
+                          const std::string& OldSubStr,
+                          const std::string& NewSubStr);
 }
 

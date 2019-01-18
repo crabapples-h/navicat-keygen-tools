@@ -13,7 +13,18 @@
 #define PRINT_PCWSTR(m) _putws(m)
 
 String InstallationPath;
+String MainAppName;
 String LibccName = TEXT("libcc.dll");
+
+static void Welcome() {
+    PRINT_MESSAGE_LITERAL("***************************************************");
+    PRINT_MESSAGE_LITERAL("*       Navicat Patcher by @DoubleLabyrinth       *");
+          _tprintf_s(TEXT("*           Release date: %-24s*\n"), TEXT(__DATE__));
+    PRINT_MESSAGE_LITERAL("***************************************************");
+    PRINT_MESSAGE_LITERAL("");
+    PRINT_MESSAGE_LITERAL("Press Enter to continue or Ctrl + C to abort.");
+    _gettchar();
+}
 
 static void Help() {
     PRINT_MESSAGE_LITERAL("Usage:");
@@ -43,28 +54,38 @@ static void BackupFile(const String& From, const String& To) {
                           "CopyFile fails.");
 }
 
-static void LoadKey(RSACipher* cipher, PTSTR FileName, PatchSolution* pSolution) {
+static void LoadKey(RSACipher* pCipher, PTSTR FileName, 
+                    PatchSolution* pSolution0,
+                    PatchSolution* pSolution1, 
+                    PatchSolution* pSolution2, 
+                    PatchSolution* pSolution3) {
     if (FileName) {
         std::string PrivateKeyFileName = Helper::ConvertToUTF8(FileName);
 
-        cipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>(PrivateKeyFileName);
+        pCipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>(PrivateKeyFileName);
 
-        if (pSolution && !pSolution->CheckKey(cipher))
+        if (pSolution0 && !pSolution0->CheckKey(pCipher) ||
+            pSolution1 && !pSolution1->CheckKey(pCipher) ||
+            pSolution2 && !pSolution2->CheckKey(pCipher) ||
+            pSolution3 && !pSolution3->CheckKey(pCipher))
             throw Exception(__BASE_FILE__, __LINE__, 
                             "The RSA private key you provide cannot be used.");
     } else {
         PRINT_MESSAGE_LITERAL("MESSAGE: Generating new RSA private key, it may take a long time.");
 
         do {
-            cipher->GenerateKey(2048);
-        } while (pSolution && !pSolution->CheckKey(cipher));   // re-generate RSA key if CheckKey return false
+            pCipher->GenerateKey(2048);
+        } while (pSolution0 && !pSolution0->CheckKey(pCipher) ||
+                 pSolution1 && !pSolution1->CheckKey(pCipher) ||
+                 pSolution2 && !pSolution2->CheckKey(pCipher) ||
+                 pSolution3 && !pSolution3->CheckKey(pCipher));   // re-generate RSA key if CheckKey return false
 
-        cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem");
+        pCipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem");
 
         PRINT_MESSAGE_LITERAL("MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.");
     }
 
-    std::string PublicKeyString = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
+    std::string PublicKeyString = pCipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
 
     PRINT_MESSAGE_LITERAL("");
     PRINT_MESSAGE_LITERAL("Your RSA public key:");
@@ -88,18 +109,17 @@ int _tmain(int argc, PTSTR argv[]) {
         return 0;
     }
 
-    ResourceGuard<CppObjectTraits<RSACipher>> pCipher;
-    ResourceGuard<CppObjectTraits<FileMapper>> pLibccDLL;
-    ResourceGuard<CppObjectTraits<PatchSolution>> pSolution;
+    Welcome();
 
-    try {
-        pCipher.TakeHoldOf(new RSACipher());
-        pLibccDLL.TakeHoldOf(new FileMapper());
-        pSolution.TakeHoldOf(new PatchSolution3());
-    } catch (Exception& e) {
-        ExceptionReport(e);
-        return 0;
-    }
+    ResourceGuard<CppObjectTraits<RSACipher>> pCipher;
+    ResourceGuard<CppObjectTraits<FileMapper>> pMainExe;
+    ResourceGuard<CppObjectTraits<FileMapper>> pLibccDLL;
+    ResourceGuard<CppObjectTraits<PatchSolution>> pSolution0;
+    ResourceGuard<CppObjectTraits<PatchSolution>> pSolution1;
+    ResourceGuard<CppObjectTraits<PatchSolution>> pSolution2;
+    ResourceGuard<CppObjectTraits<PatchSolution>> pSolution3;
+
+    pCipher.TakeHoldOf(new RSACipher());
 
     try {
         SetPath(argv[1]);
@@ -111,30 +131,151 @@ int _tmain(int argc, PTSTR argv[]) {
         return 0;
     }
 
+    // -----------
+    //  decide which PatchSolution
+    // -----------
+    do {
+        pLibccDLL.TakeHoldOf(new FileMapper());
+        try {
+            pLibccDLL.GetHandle()->MapFile(InstallationPath + TEXT("libcc.dll"));
+
+            pSolution3.TakeHoldOf(new PatchSolution3());
+            pSolution3.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution3.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution3 will be omitted.");
+                pSolution3.Release();
+            } else {
+                break;
+            }
+
+            pSolution2.TakeHoldOf(new PatchSolution2());
+            pSolution2.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution2.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution2 will be omitted.");
+                pSolution2.Release();
+            } else {
+                break;
+            }
+
+            pSolution1.TakeHoldOf(new PatchSolution1());
+            pSolution1.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution1.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution1 will be omitted.");
+                pSolution2.Release();
+            } else {
+                break;
+            }
+
+            pLibccDLL.Release();
+        } catch (Exception& e) {
+            if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_NOT_FOUND) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: libcc.dll is not found.");
+                PRINT_MESSAGE_LITERAL("         PatchSolution1 will be omitted.");
+                PRINT_MESSAGE_LITERAL("         PatchSolution2 will be omitted.");
+                PRINT_MESSAGE_LITERAL("         PatchSolution3 will be omitted.");
+                pLibccDLL.Release();
+            } else {
+                ExceptionReport(e);
+                if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                    PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                return 0;
+            }
+        }
+
+        pMainExe.TakeHoldOf(new FileMapper());
+        do {
+            try {
+                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Navicat.exe"));
+                MainAppName = TEXT("Navicat.exe");
+                break;
+            } catch (Exception& e) {
+                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                    ExceptionReport(e);
+                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                    return 0;
+                }
+            }
+
+            try {
+                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Modeler.exe"));
+                MainAppName = TEXT("Modeler.exe");
+                break;
+            } catch (Exception& e) {
+                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                    ExceptionReport(e);
+                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                    return 0;
+                }
+            }
+
+            try {
+                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Rviewer.exe"));
+                MainAppName = TEXT("Rviewer.exe");
+                break;
+            } catch (Exception& e) {
+                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                    ExceptionReport(e);
+                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                    return 0;
+                }
+            }
+
+            pMainExe.Release();
+        } while (false);
+    } while (false);
+
+    // -------------
+    //  LoadKey
+    //  BackupFile
+    //  MakePatch
+    // -------------
     try {
-        pLibccDLL.GetHandle()->MapFile(InstallationPath + LibccName);
+        LoadKey(pCipher, argc == 3 ? argv[2] : nullptr, 
+                pSolution0, 
+                pSolution1, 
+                pSolution2, 
+                pSolution3);
+
+        if (pLibccDLL) {
+            BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
+        } else {
+            BackupFile(InstallationPath + MainAppName, InstallationPath + MainAppName + TEXT(".backup"));
+        }
+
+        if (pSolution3.IsValid())
+            pSolution3.GetHandle()->MakePatch(pCipher);
+        if (pSolution2.IsValid())
+            pSolution2.GetHandle()->MakePatch(pCipher);
+        if (pSolution1.IsValid())
+            pSolution1.GetHandle()->MakePatch(pCipher);
+        if (pSolution0.IsValid())
+            pSolution0.GetHandle()->MakePatch(pCipher);
     } catch (Exception& e) {
         ExceptionReport(e);
-        if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
-            PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
-        return 0;
-    }
-
-    pSolution.GetHandle()->SetFile(pLibccDLL);
-    if (!pSolution.GetHandle()->FindPatchOffset()) {
-        PRINT_MESSAGE_LITERAL("ERROR: Cannot find RSA public key in libcc.dll");
-        PRINT_MESSAGE_LITERAL("Are you sure that libcc.dll has not been patched before?");
-        return 0;
-    }
-
-    PRINT_MESSAGE_LITERAL("");
-
-    try {
-        LoadKey(pCipher, argc == 3 ? argv[2] : nullptr, pSolution);
-        BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
-        pSolution.GetHandle()->MakePatch(pCipher);
-    } catch (Exception& e) {
-        ExceptionReport(e);
+        if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_EXISTS) {
+            if (pLibccDLL.IsValid()) {
+                _tprintf_s(TEXT("The backup of %s has been found.\n"), LibccName.c_str());
+                _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
+                           LibccName.c_str(),
+                           LibccName.c_str());
+                _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
+                           LibccName.c_str(),
+                           LibccName.c_str(),
+                           LibccName.c_str());
+            } else {
+                _tprintf_s(TEXT("The backup of %s has been found.\n"), MainAppName.c_str());
+                _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
+                           MainAppName.c_str(),
+                           MainAppName.c_str());
+                _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
+                           MainAppName.c_str(),
+                           MainAppName.c_str(),
+                           MainAppName.c_str());
+            }
+        }
         return 0;
     }
 

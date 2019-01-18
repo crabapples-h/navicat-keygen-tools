@@ -2,7 +2,6 @@
 #include <openssl/crypto.h>
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
-
 #include <string>
 
 #ifdef _DEBUG
@@ -62,30 +61,6 @@ protected:
         }
     }
 
-public:
-
-    Navicat11Crypto() {
-        static const uint8_t PresetKey[20] = {
-            0x42, 0xCE, 0xB2, 0x71, 0xA5, 0xE4, 0x58, 0xB7,
-            0x4A, 0xEA, 0x93, 0x94, 0x79, 0x22, 0x35, 0x43,
-            0x91, 0x87, 0x33, 0x40
-        };
-
-        BF_set_key(&BlowfishKey, SHA_DIGEST_LENGTH, PresetKey);
-    }
-
-    Navicat11Crypto(const void* UserKey, size_t Length) {
-        SetKey(UserKey, Length);
-    }
-
-    void SetKey(const void* UserKey, size_t Length) {
-        unsigned char MessageDigest[SHA_DIGEST_LENGTH];
-
-        SHA1(reinterpret_cast<const unsigned char*>(UserKey), Length, MessageDigest);
-        BF_set_key(&BlowfishKey, SHA_DIGEST_LENGTH, MessageDigest);
-        OPENSSL_cleanse(MessageDigest, SHA_DIGEST_LENGTH);
-    }
-
     std::string EncryptString(const void* srcBytes, size_t srclen) {
         std::string ret;
         uint8_t CV[BF_BLOCK] = {
@@ -94,7 +69,7 @@ public:
 
         if (srclen == 0)
             return ret;
-        
+
         ret.resize(2 * srclen);
 
         BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
@@ -132,10 +107,10 @@ public:
         };
 
         if (CheckHex(srchex, srclen) == false)
-            return ret;
+            throw std::invalid_argument("Not hex string.");
 
         ret.resize(srclen / 2);
-        
+
         BF_ecb_encrypt(CV, CV, &BlowfishKey, BF_ENCRYPT);
 
         const char(*blocks)[16] = reinterpret_cast<const char(*)[16]>(srchex);
@@ -167,6 +142,38 @@ public:
         }
 
         return ret;
+    }
+
+public:
+
+    Navicat11Crypto() {
+        static const uint8_t PresetKey[20] = {
+            0x42, 0xCE, 0xB2, 0x71, 0xA5, 0xE4, 0x58, 0xB7,
+            0x4A, 0xEA, 0x93, 0x94, 0x79, 0x22, 0x35, 0x43,
+            0x91, 0x87, 0x33, 0x40
+        };
+
+        BF_set_key(&BlowfishKey, SHA_DIGEST_LENGTH, PresetKey);
+    }
+
+    Navicat11Crypto(const void* UserKey, size_t Length) {
+        SetKey(UserKey, Length);
+    }
+
+    void SetKey(const void* UserKey, size_t Length) {
+        unsigned char MessageDigest[SHA_DIGEST_LENGTH];
+
+        SHA1(reinterpret_cast<const unsigned char*>(UserKey), Length, MessageDigest);
+        BF_set_key(&BlowfishKey, SHA_DIGEST_LENGTH, MessageDigest);
+        OPENSSL_cleanse(MessageDigest, SHA_DIGEST_LENGTH);
+    }
+
+    std::string EncryptString(const std::string& Plaintext) {
+        return EncryptString(Plaintext.c_str(), Plaintext.length());
+    }
+
+    std::string DecryptString(const std::string& Ciphertext) {
+        return DecryptString(Ciphertext.c_str(), Ciphertext.length());
     }
 
     void Clear() {

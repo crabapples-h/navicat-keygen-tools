@@ -24,6 +24,15 @@
     <ClCompile Include="PatchSolution3.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="PatchSolution0.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchSolution2.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchSolution1.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RSACipher.hpp">
