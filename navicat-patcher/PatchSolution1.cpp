@@ -208,7 +208,7 @@ bool PatchSolution1::FindPatchOffset() noexcept {
 
     for (size_t i = 0; i < KeywordsCount; ++i) {
         _Patches[i] = TempPatches[i];
-        _tprintf_s(TEXT("MESSAGE: PatchSolution1: Keywords[%zu] has been found: offset = +0x%08llx.\n"), 
+        _tprintf_s(TEXT("MESSAGE: PatchSolution1: Keywords[%zu] has been found: offset = +0x%08zx.\n"), 
                    i,
                    _Patches[i].PtrToPatch - _TargetFile.GetImageBaseView<uint8_t>());
     }
