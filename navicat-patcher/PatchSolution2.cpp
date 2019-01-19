@@ -111,7 +111,7 @@ bool PatchSolution2::FindPatchOffset() noexcept {
     memcpy(PatchOffsets, Offsets, sizeof(PatchOffsets));
 
     for (size_t i = 0; i < KeywordsCount; ++i)
-        _tprintf_s(TEXT("MESSAGE: [PatchSolution2] Keywords[%zu] has been found: offset = +0x%08lx.\n"),
+        _tprintf_s(TEXT("MESSAGE: PatchSolution2: Keywords[%zu] has been found: offset = +0x%08lx.\n"),
                    i, 
                    PatchOffsets[i]);
 
@@ -214,7 +214,7 @@ bool PatchSolution2::FindPatchOffset() noexcept {
     memcpy(PatchOffsets, Offsets, sizeof(PatchOffsets));
 
     for (size_t i = 0; i < KeywordsCount; ++i)
-        _tprintf_s(TEXT("MESSAGE: [PatchSolution2] Keywords[%zu] has been found: offset = +0x%08lx.\n"),
+        _tprintf_s(TEXT("MESSAGE: PatchSolution2: Keywords[%zu] has been found: offset = +0x%08lx.\n"),
                    i, 
                    PatchOffsets[i]);
 
@@ -236,6 +236,10 @@ void PatchSolution2::MakePatch(RSACipher* pCipher) const {
             PublicKeyPEM.erase(pos, 1);
         }
     }
+
+    _putts(TEXT("******************************************"));
+    _putts(TEXT("*            PatchSulution2              *"));
+    _putts(TEXT("******************************************"));
 
     for (size_t i = 0; i < KeywordsCount; ++i) {
         _tprintf_s(TEXT("@ +0x%08lx: %02X %02X %02X ---> "),

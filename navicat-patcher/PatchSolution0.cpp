@@ -31,7 +31,7 @@ bool PatchSolution0::FindPatchOffset() noexcept {
     for (DWORD i = 0; i < PtrToResourceSectionHeader->SizeOfRawData; ++i) {
         if (memcmp(PtrToResourceSection + i, Keyword, KeywordLength) == 0) {
             PatchOffset = PtrToResourceSectionHeader->PointerToRawData + i;
-            _tprintf_s(TEXT("MESSAGE: [Solution0] Keyword has been found: offset = +0x%08lx.\n"), PatchOffset);
+            _tprintf_s(TEXT("MESSAGE: PatchSolution0: Keyword has been found: offset = +0x%08lx.\n"), PatchOffset);
             return true;
         }
     }
@@ -54,6 +54,9 @@ void PatchSolution0::MakePatch(RSACipher* cipher) const {
         cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
     Helper::ReplaceSubString(PublicKeyPEM, "\n", "\r\n");
 
+    _putts(TEXT("******************************************"));
+    _putts(TEXT("*            PatchSulution0              *"));
+    _putts(TEXT("******************************************"));
     _tprintf_s(TEXT("@ +0x%08x\nPrevious:\n"), PatchOffset);
     Helper::PrintMemory(pFileView + PatchOffset,
                         pFileView + PatchOffset + KeywordLength,

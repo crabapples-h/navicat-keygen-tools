@@ -244,6 +244,10 @@ void PatchSolution1::MakePatch(RSACipher* pCipher) const {
     uint32_t ImmValue1 = std::stoul(EncryptedPEM1.c_str());
     uint32_t ImmValue3 = std::stoul(EncryptedPEM3.c_str());
 
+    _putts(TEXT("******************************************"));
+    _putts(TEXT("*            PatchSulution1              *"));
+    _putts(TEXT("******************************************"));
+
     // ----------------------------------
     //     process PatchOffsets[0]
     // ----------------------------------
@@ -312,6 +316,5 @@ void PatchSolution1::MakePatch(RSACipher* pCipher) const {
     Helper::PrintMemory(_Patches[4].PtrToPatch,
                         _Patches[4].PtrToPatch + _Patches[4].PatchSize,
                         pFileView);
-    _putts(TEXT(""));
 }
 

@@ -631,7 +631,7 @@ bool PatchSolution3::FindPatchOffset() noexcept {
         return false;
 
     for (size_t i = 0; i < KeywordsCount; ++i) {
-        _tprintf_s(TEXT("MESSAGE: [PatchSolution3] Keywords[%zu] has been found:\n"), i);
+        _tprintf_s(TEXT("MESSAGE: PatchSolution3: Keywords[%zu] has been found:\n"), i);
         _tprintf_s(TEXT("         Relative Machine Code Offset = +0x%016zx\n"), _Patches[i].PtrToRelativeCode - pFileView);
         _tprintf_s(TEXT("         Relative Machine Code RVA    = +0x%016llx\n"), _Patches[i].RelativeCodeRVA);
         _tprintf_s(TEXT("         Patch Offset                 = +0x%016zx\n"), _Patches[i].PtrToPatch - pFileView);
@@ -731,6 +731,10 @@ void PatchSolution3::MakePatch(RSACipher* pCipher) const {
     }
 
     uint8_t* pFileView = _TargetFile.GetImageBaseView<uint8_t>();
+
+    _putts(TEXT("******************************************"));
+    _putts(TEXT("*            PatchSulution3              *"));
+    _putts(TEXT("******************************************"));
 
     size_t ptr = 0;
     for (size_t i = 0; i < KeywordsCount; ++i) {

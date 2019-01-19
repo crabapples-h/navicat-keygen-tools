@@ -324,20 +324,27 @@ int _tmain(int argc, PTSTR argv[]) {
     //  MakePatch
     // -------------
     try {
-        if (pSolution3.IsValid())
+        if (pSolution3.IsValid()) {
             pSolution3.GetHandle()->MakePatch(pCipher);
-        if (pSolution2.IsValid())
+            PRINT_MESSAGE_LITERAL("");
+        }
+        if (pSolution2.IsValid()) {
             pSolution2.GetHandle()->MakePatch(pCipher);
-        if (pSolution1.IsValid())
+            PRINT_MESSAGE_LITERAL("");
+        }
+        if (pSolution1.IsValid()) {
             pSolution1.GetHandle()->MakePatch(pCipher);
-        if (pSolution0.IsValid())
+            PRINT_MESSAGE_LITERAL("");
+        }
+        if (pSolution0.IsValid()) {
             pSolution0.GetHandle()->MakePatch(pCipher);
+            PRINT_MESSAGE_LITERAL("");
+        }
     } catch (Exception& e) {
         ExceptionReport(e);
         return 0;
     }
 
-    PRINT_MESSAGE_LITERAL("");
     PRINT_MESSAGE_LITERAL("MESSAGE: Patch has been done successfully.");
     return 0;
 }
