@@ -202,6 +202,8 @@ int _tmain(int argc, PTSTR argv[]) {
             if (pSolution0.GetHandle()->FindPatchOffset() == false) {
                 PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution0 will be omitted.");
                 pSolution0.Release();
+            } else {
+                PRINT_MESSAGE_LITERAL("");
             }
         } catch (Exception& e) {
             ExceptionReport(e);
@@ -218,6 +220,8 @@ int _tmain(int argc, PTSTR argv[]) {
             if (pSolution3.GetHandle()->FindPatchOffset() == false) {
                 PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution3 will be omitted.");
                 pSolution3.Release();
+            } else {
+                PRINT_MESSAGE_LITERAL("");
             }
 
             pSolution2.TakeHoldOf(new PatchSolution2());
@@ -225,6 +229,8 @@ int _tmain(int argc, PTSTR argv[]) {
             if (pSolution2.GetHandle()->FindPatchOffset() == false) {
                 PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution2 will be omitted.");
                 pSolution2.Release();
+            } else {
+                PRINT_MESSAGE_LITERAL("");
             }
 
             pSolution1.TakeHoldOf(new PatchSolution1());
@@ -232,6 +238,8 @@ int _tmain(int argc, PTSTR argv[]) {
             if (pSolution1.GetHandle()->FindPatchOffset() == false) {
                 PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution1 will be omitted.");
                 pSolution2.Release();
+            } else {
+                PRINT_MESSAGE_LITERAL("");
             }
         } catch (Exception& e) {
             ExceptionReport(e);
