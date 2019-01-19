@@ -119,8 +119,6 @@ int _tmain(int argc, PTSTR argv[]) {
     ResourceGuard<CppObjectTraits<PatchSolution>> pSolution2;
     ResourceGuard<CppObjectTraits<PatchSolution>> pSolution3;
 
-    pCipher.TakeHoldOf(new RSACipher());
-
     try {
         SetPath(argv[1]);
     } catch (Exception& e) {
@@ -131,50 +129,33 @@ int _tmain(int argc, PTSTR argv[]) {
         return 0;
     }
 
-    // -----------
-    //  decide which PatchSolution
-    // -----------
+    pCipher.TakeHoldOf(new RSACipher());
+
+    // -----------------
+    //  Map files
+    // -----------------
     do {
         pLibccDLL.TakeHoldOf(new FileMapper());
         try {
             pLibccDLL.GetHandle()->MapFile(InstallationPath + TEXT("libcc.dll"));
-
-            pSolution3.TakeHoldOf(new PatchSolution3());
-            pSolution3.GetHandle()->SetFile(pLibccDLL);
-            if (pSolution3.GetHandle()->FindPatchOffset() == false) {
-                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution3 will be omitted.");
-                pSolution3.Release();
-            } else {
-                break;
-            }
-
-            pSolution2.TakeHoldOf(new PatchSolution2());
-            pSolution2.GetHandle()->SetFile(pLibccDLL);
-            if (pSolution2.GetHandle()->FindPatchOffset() == false) {
-                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution2 will be omitted.");
-                pSolution2.Release();
-            } else {
-                break;
-            }
-
-            pSolution1.TakeHoldOf(new PatchSolution1());
-            pSolution1.GetHandle()->SetFile(pLibccDLL);
-            if (pSolution1.GetHandle()->FindPatchOffset() == false) {
-                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution1 will be omitted.");
-                pSolution2.Release();
-            } else {
-                break;
-            }
-
-            pLibccDLL.Release();
+            break;
         } catch (Exception& e) {
-            if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_NOT_FOUND) {
-                PRINT_MESSAGE_LITERAL("MESSAGE: libcc.dll is not found.");
-                PRINT_MESSAGE_LITERAL("         PatchSolution1 will be omitted.");
-                PRINT_MESSAGE_LITERAL("         PatchSolution2 will be omitted.");
-                PRINT_MESSAGE_LITERAL("         PatchSolution3 will be omitted.");
-                pLibccDLL.Release();
-            } else {
+            if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                ExceptionReport(e);
+                if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                    PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                return 0;
+            }
+        }
+        pLibccDLL.Release();
+
+        pMainExe.TakeHoldOf(new FileMapper());
+        try {
+            pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Navicat.exe"));
+            MainAppName = TEXT("Navicat.exe");
+            break;
+        } catch (Exception& e) {
+            if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
                 ExceptionReport(e);
                 if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
                     PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
@@ -182,69 +163,161 @@ int _tmain(int argc, PTSTR argv[]) {
             }
         }
 
-        pMainExe.TakeHoldOf(new FileMapper());
-        do {
-            try {
-                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Navicat.exe"));
-                MainAppName = TEXT("Navicat.exe");
-                break;
-            } catch (Exception& e) {
-                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
-                    ExceptionReport(e);
-                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
-                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
-                    return 0;
-                }
+        try {
+            pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Modeler.exe"));
+            MainAppName = TEXT("Modeler.exe");
+            break;
+        } catch (Exception& e) {
+            if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                ExceptionReport(e);
+                if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                    PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                return 0;
             }
+        }
 
-            try {
-                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Modeler.exe"));
-                MainAppName = TEXT("Modeler.exe");
-                break;
-            } catch (Exception& e) {
-                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
-                    ExceptionReport(e);
-                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
-                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
-                    return 0;
-                }
+        try {
+            pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Rviewer.exe"));
+            MainAppName = TEXT("Rviewer.exe");
+            break;
+        } catch (Exception& e) {
+            if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
+                ExceptionReport(e);
+                if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
+                    PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
+                return 0;
             }
-
-            try {
-                pMainExe.GetHandle()->MapFile(InstallationPath + TEXT("Rviewer.exe"));
-                MainAppName = TEXT("Rviewer.exe");
-                break;
-            } catch (Exception& e) {
-                if (!e.HasErrorCode() || e.ErrorCode() != ERROR_FILE_NOT_FOUND) {
-                    ExceptionReport(e);
-                    if (e.HasErrorCode() && e.ErrorCode() == ERROR_ACCESS_DENIED)
-                        PRINT_MESSAGE_LITERAL("Please re-run with Administrator privilege.");
-                    return 0;
-                }
-            }
-
-            pMainExe.Release();
-        } while (false);
+        }
+        pMainExe.Release();
     } while (false);
+
+    // -----------
+    //  decide PatchSolutions
+    // -----------
+
+    if (pMainExe.IsValid()) {
+        try {
+            pSolution0.TakeHoldOf(new PatchSolution0());
+            pSolution0.GetHandle()->SetFile(pMainExe);
+            if (pSolution0.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution0 will be omitted.");
+                pSolution0.Release();
+            }
+        } catch (Exception& e) {
+            ExceptionReport(e);
+            return 0;
+        }
+    } else {
+        PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution0 will be omitted.");
+    }
+
+    if (pLibccDLL.IsValid()) {
+        try {
+            pSolution3.TakeHoldOf(new PatchSolution3());
+            pSolution3.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution3.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution3 will be omitted.");
+                pSolution3.Release();
+            }
+
+            pSolution2.TakeHoldOf(new PatchSolution2());
+            pSolution2.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution2.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution2 will be omitted.");
+                pSolution2.Release();
+            }
+
+            pSolution1.TakeHoldOf(new PatchSolution1());
+            pSolution1.GetHandle()->SetFile(pLibccDLL);
+            if (pSolution1.GetHandle()->FindPatchOffset() == false) {
+                PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution1 will be omitted.");
+                pSolution2.Release();
+            }
+        } catch (Exception& e) {
+            ExceptionReport(e);
+            return 0;
+        }
+    } else {
+        PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution3 will be omitted.");
+        PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution2 will be omitted.");
+        PRINT_MESSAGE_LITERAL("MESSAGE: PatchSolution1 will be omitted.");
+    }
+
+    if (pSolution0.IsValid() == false)
+        pMainExe.Release();
+
+    if (pSolution1.IsValid() == false && pSolution2.IsValid() == false && pSolution3.IsValid() == false)
+        pLibccDLL.Release();
+
+    if (pSolution0.IsValid() == false &&
+        pSolution1.IsValid() == false &&
+        pSolution2.IsValid() == false &&
+        pSolution3.IsValid() == false) 
+    {
+        PRINT_MESSAGE_LITERAL("");
+        PRINT_MESSAGE_LITERAL("ERROR: Cannot find RSA public key.");
+        PRINT_MESSAGE_LITERAL("Are you sure your Navicat has not been patched before?");
+        return 0;
+    }
 
     // -------------
     //  LoadKey
+    // -------------
+    try {
+        LoadKey(pCipher,
+                argc == 3 ? argv[2] : nullptr,
+                pSolution0,
+                pSolution1,
+                pSolution2,
+                pSolution3);
+    } catch (Exception& e) {
+        ExceptionReport(e);
+        return 0;
+    }
+
+    // -------------
     //  BackupFile
+    // -------------
+    try {
+        if (pMainExe.IsValid())
+            BackupFile(InstallationPath + MainAppName, InstallationPath + MainAppName + TEXT(".backup"));
+    } catch (Exception& e) {
+        ExceptionReport(e);
+        if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_EXISTS) {
+            _tprintf_s(TEXT("The backup of %s has been found.\n"), MainAppName.c_str());
+            _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
+                       MainAppName.c_str(),
+                       MainAppName.c_str());
+            _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
+                       MainAppName.c_str(),
+                       MainAppName.c_str(),
+                       MainAppName.c_str());
+        }
+        return 0;
+    }
+
+    try {
+        if (pLibccDLL.IsValid())
+            BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
+    } catch (Exception& e) {
+        ExceptionReport(e);
+        if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_EXISTS) {
+            _tprintf_s(TEXT("The backup of %s has been found.\n"), LibccName.c_str());
+            _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
+                       LibccName.c_str(),
+                       LibccName.c_str());
+            _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
+                       LibccName.c_str(),
+                       LibccName.c_str(),
+                       LibccName.c_str());
+        }
+        return 0;
+    }
+
+    // -------------
     //  MakePatch
     // -------------
     try {
-        LoadKey(pCipher, argc == 3 ? argv[2] : nullptr, 
-                pSolution0, 
-                pSolution1, 
-                pSolution2, 
-                pSolution3);
-
-        if (pLibccDLL) {
-            BackupFile(InstallationPath + LibccName, InstallationPath + LibccName + TEXT(".backup"));
-        } else {
-            BackupFile(InstallationPath + MainAppName, InstallationPath + MainAppName + TEXT(".backup"));
-        }
-
         if (pSolution3.IsValid())
             pSolution3.GetHandle()->MakePatch(pCipher);
         if (pSolution2.IsValid())
@@ -255,27 +328,6 @@ int _tmain(int argc, PTSTR argv[]) {
             pSolution0.GetHandle()->MakePatch(pCipher);
     } catch (Exception& e) {
         ExceptionReport(e);
-        if (e.HasErrorCode() && e.ErrorCode() == ERROR_FILE_EXISTS) {
-            if (pLibccDLL.IsValid()) {
-                _tprintf_s(TEXT("The backup of %s has been found.\n"), LibccName.c_str());
-                _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
-                           LibccName.c_str(),
-                           LibccName.c_str());
-                _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
-                           LibccName.c_str(),
-                           LibccName.c_str(),
-                           LibccName.c_str());
-            } else {
-                _tprintf_s(TEXT("The backup of %s has been found.\n"), MainAppName.c_str());
-                _tprintf_s(TEXT("Please remove %s.backup in Navicat installation path if you're sure %s has not been patched.\n"),
-                           MainAppName.c_str(),
-                           MainAppName.c_str());
-                _tprintf_s(TEXT("Otherwise please restore %s by %s.backup and remove %s.backup then try again.\n"),
-                           MainAppName.c_str(),
-                           MainAppName.c_str(),
-                           MainAppName.c_str());
-            }
-        }
         return 0;
     }
 
