@@ -22,8 +22,8 @@
 class PatchSolution{
 public:
     virtual void SetFile(FileMapper* pLibccFile) = 0;
-    virtual bool CheckKey(RSACipher* pCipher) const = 0;
     virtual bool FindPatchOffset() noexcept = 0;
+    virtual bool CheckKey(RSACipher* pCipher) const = 0;
     virtual void MakePatch(RSACipher* pCipher) const = 0;
     virtual ~PatchSolution() {}
 };
@@ -58,17 +58,35 @@ public:
     virtual void MakePatch(RSACipher* cipher) const override;
 };
 
-// PatchSolution1 will replace the RSA public key stored in libcc.dll
+// PatchSolution1, 2, 3 will replace the RSA public key stored in libcc.dll
+
 class PatchSolution1 : public PatchSolution {
 private:
-    static const char* Keywords[5];
-    static const size_t KeywordsLength[5];
+
+    enum KeywordDataType {
+        IMM_DATA,
+        STRING_DATA
+    };
+
+    struct KeywordInfo {
+        const char* PtrToData;
+        size_t Length;
+        KeywordDataType Type;
+    };
+
+    struct PatchPointInfo {
+        uint8_t* PtrToPatch;
+        size_t PatchSize;
+        size_t MaxPatchSize;
+    };
+
+    static constexpr size_t KeywordsCount = 5;
+    static const KeywordInfo Keywords[KeywordsCount];
 
     ImageInterpreter _TargetFile;
-    off_t PatchOffsets[5];
+    mutable PatchPointInfo _Patches[KeywordsCount];
 public:
-    PatchSolution1() :
-        PatchOffsets{ -1, -1, -1, -1, -1 } {}
+    PatchSolution1() : _Patches{ } {}
 
     virtual void SetFile(FileMapper* pLibccFile) override {
         if (!_TargetFile.ParseImage(pLibccFile->GetView<PVOID>(), true)) {
@@ -77,11 +95,11 @@ public:
         }
     }
 
-    virtual bool CheckKey(RSACipher* cipher) const override;
+    virtual bool CheckKey(RSACipher* pCipher) const override;
 
     virtual bool FindPatchOffset() noexcept override;
 
-    virtual void MakePatch(RSACipher* cipher) const override;
+    virtual void MakePatch(RSACipher* pCipher) const override;
 };
 
 class PatchSolution2 : public PatchSolution {
