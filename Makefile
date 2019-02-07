@@ -5,19 +5,25 @@ OPENSSL_LIB_PATH = /usr/local/opt/openssl/lib
 OUTPUT_DIR = ./bin/
 PATCHER_DIR = ./navicat-patcher/
 KEYGEN_DIR = ./navicat-keygen/
-keygen_output = $(OUTPUB_DIR)navicat-keygen
 
 PATCHER_HEADER = \
-$(PATCHER_DIR)FileMapper.hpp \
-$(PATCHER_DIR)Helper.hpp \
+$(PATCHER_DIR)Exception.hpp \
+$(PATCHER_DIR)ResourceObject.hpp \
+$(PATCHER_DIR)SystemObjectTraits.hpp \
+$(PATCHER_DIR)CapstoneDisassembler.hpp \
+$(PATCHER_DIR)KeystoneAssembler.hpp \
 $(PATCHER_DIR)RSACipher.hpp \
-$(PATCHER_DIR)Solutions.hpp
+$(PATCHER_DIR)X64ImageInterpreter.hpp \
+$(PATCHER_DIR)PatchSolutions.hpp
 
 PATCHER_SOURCE = \
-$(PATCHER_DIR)Helper.cpp \
-$(PATCHER_DIR)main.cpp \
-$(PATCHER_DIR)Solution0.cpp \
-$(PATCHER_DIR)Solution1.cpp
+$(PATCHER_DIR)CapstoneDisassembler.cpp \
+$(PATCHER_DIR)KeystoneAssembler.cpp \
+$(PATCHER_DIR)PrintMemory.cpp \
+$(PATCHER_DIR)PatchSolution0.cpp \
+$(PATCHER_DIR)PatchSolution1.cpp \
+$(PATCHER_DIR)PatchSolution2.cpp \
+$(PATCHER_DIR)main.cpp
 
 PATCHER_BINARY = $(OUTPUT_DIR)navicat-patcher
 
@@ -35,7 +41,7 @@ KEYGEN_BINARY = $(OUTPUT_DIR)navicat-keygen
 
 patcher: $(PATCHER_HEADER) $(PATCHER_SOURCE)
 	@if [ ! -d $(OUTPUT_DIR) ]; then mkdir -p $(OUTPUT_DIR); fi
-	$(CC) -std=c++11 -O2 -I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) -lcrypto $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
+	$(CC) -std=c++17 -O2 -I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) -lcrypto -lcapstone -lkeystone $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
 
 keygen: $(KEYGEM_HEADER) $(KEYGEN_SOURCE)
 	@if [ ! -d $(OUTPUT_DIR) ]; then mkdir -p $(OUTPUT_DIR); fi
