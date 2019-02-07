@@ -1,156 +1,152 @@
-#include <stdio.h>
 #include <errno.h>
-#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include "PatchSolutions.hpp"
+#include "KeystoneAssembler.hpp"
 
-#include "Helper.hpp"
-#include "FileMapper.hpp"
-#include "RSACipher.hpp"
-#include "Solutions.hpp"
-
-#define SAFE_DELETE(x) { delete x; x = nullptr; }
-
-void help() {
-    puts("Usage:");
-    puts("    ./navicat-patcher <navicat executable file> [RSA-2048 PrivateKey(PEM file)]");
+static void Welcome() {
+    puts("***************************************************");
+    puts("*       Navicat Patcher by @DoubleLabyrinth       *");
+    printf("*           Release date: %-24s*\n", __DATE__);
+    puts("***************************************************");
     puts("");
+    puts("Press Enter to continue or Ctrl + C to abort.");
+    getchar();
 }
 
-bool LoadKey(RSACipher* cipher, const char* filename,
-             Patcher::Solution* pSolution0,
-             Patcher::Solution* pSolution1) {
-    if (filename) {
-        if (!cipher->ImportKeyFromFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::PEM>(filename)) {
-            REPORT_ERROR("ERROR: cipher->ImportKeyFromFile failed.");
-            return false;
-        }
+static void Help() {
+    puts("***************************************************");
+    puts("*       Navicat Patcher by @DoubleLabyrinth       *");
+    printf("*           Release date: %-24s*\n", __DATE__);
+    puts("***************************************************");
+    puts("");
+    puts("Usage:");
+    puts("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]");
+}
 
-        if ((pSolution0 && !pSolution0->CheckKey(cipher)) ||
-            (pSolution1 && !pSolution1->CheckKey(cipher))) {
-            REPORT_ERROR("ERROR: The RSA private key you provided cannot be used.");
-            return false;
-        }
+static void LoadKey(RSACipher* pCipher, const char* FileName,
+                    PatchSolution* pSolution0,
+                    PatchSolution* pSolution1,
+                    PatchSolution* pSolution2) {
+    if (FileName) {
+        pCipher->ImportKeyFromFile<RSAKeyType::PrivateKey, RSAKeyFormat::PEM>(FileName);
+
+        if ((pSolution0 && !pSolution0->CheckKey(pCipher)) ||
+            (pSolution1 && !pSolution1->CheckKey(pCipher)) ||
+            (pSolution2 && !pSolution2->CheckKey(pCipher)))
+            throw Exception(__FILE__, __LINE__,
+                            "The RSA private key you provide cannot be used.");
     } else {
-        PRINT_MESSAGE("");
-        PRINT_MESSAGE("MESSAGE: Generating new RSA private key, it may take a long time.");
+        puts("MESSAGE: Generating new RSA private key, it may take a long time.");
 
         do {
-            cipher->GenerateKey(2048);
-        } while ((pSolution0 && !pSolution0->CheckKey(cipher)) ||
-                 (pSolution1 && !pSolution1->CheckKey(cipher)));   // re-generate RSA key if one of CheckKey return false
+            pCipher->GenerateKey(2048);
+        } while ((pSolution0 && !pSolution0->CheckKey(pCipher)) ||
+                 (pSolution1 && !pSolution1->CheckKey(pCipher)) ||
+                 (pSolution2 && !pSolution2->CheckKey(pCipher)));   // re-generate RSA key if CheckKey return false
 
-        if (!cipher->ExportKeyToFile<RSACipher::KeyType::PrivateKey, RSACipher::KeyFormat::NotSpecified>("RegPrivateKey.pem")) {
-            REPORT_ERROR("ERROR: Failed to save RSA private key.");
-            return false;
+        pCipher->ExportKeyToFile<RSAKeyType::PrivateKey, RSAKeyFormat::NotSpecified>("RegPrivateKey.pem");
+
+        puts("MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.");
+    }
+
+    std::string PublicKeyPEM =
+        pCipher->ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
+
+    puts("");
+    puts("Your RSA public key:");
+    puts(PublicKeyPEM.c_str());
+}
+
+static void ExceptionReport(const Exception& e) noexcept {
+    printf("ERROR: FileName %s - Line %zu\n", e.SourceFile(), e.SourceLine());
+    if (e.HasErrorCode()) {
+        const char* aa = e.ErrorString();
+        printf("ErrorCode = 0x%08lx\n", e.ErrorCode());
+        printf("ErrorString: %s\n", e.ErrorString());
+    } else {
+        printf("%s\n", e.CustomMessage());
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2 && argc != 3) {
+        Help();
+        return 0;
+    }
+
+    Welcome();
+
+    ResourceObject<FileHandleTraits> MainAppFile;
+    ResourceObject<MapViewTraits> MainAppMapView;
+    ResourceObject<CppObjectTraits<RSACipher>> pCipher;
+    ResourceObject<CppObjectTraits<PatchSolution>> pSolution0;
+    ResourceObject<CppObjectTraits<PatchSolution>> pSolution1;
+    ResourceObject<CppObjectTraits<PatchSolution>> pSolution2;
+
+    try {
+        MainAppFile.TakeOver(open(argv[1], O_RDWR));
+        if (!MainAppFile.IsValid())
+            throw SystemError(__FILE__, __LINE__, errno,
+                              "open fails.");
+
+        struct stat stat_buf = {};
+        if (fstat(MainAppFile, &stat_buf) != 0)
+            throw SystemError(__FILE__, __LINE__, errno,
+                              "fstat fails.");
+
+        MainAppMapView.TakeOver({
+            mmap(nullptr, static_cast<size_t>(stat_buf.st_size), PROT_READ | PROT_WRITE, MAP_SHARED, MainAppFile, 0),
+            static_cast<size_t>(stat_buf.st_size)
+        });
+        if (!MainAppMapView.IsValid())
+            throw SystemError(__FILE__, __LINE__, errno,
+                              "mmap fails.");
+
+        pCipher.TakeOver(new RSACipher());
+        pSolution0.TakeOver(new PatchSolution0());
+        pSolution1.TakeOver(new PatchSolution1());
+        pSolution2.TakeOver(new PatchSolution2());
+
+        pSolution0->SetFile(MainAppMapView);
+        pSolution1->SetFile(MainAppMapView);
+        pSolution2->SetFile(MainAppMapView);
+
+        if (!pSolution0->FindPatchOffset())
+            pSolution0.Release();
+        if (!pSolution1->FindPatchOffset())
+            pSolution1.Release();
+        if (!pSolution2->FindPatchOffset())
+            pSolution2.Release();
+
+        if (!pSolution0.IsValid() && !pSolution1.IsValid() && !pSolution2.IsValid()) {
+            puts("MESSAGE: Patch abort. None of PatchSolutions applied.");
+            return 0;
         }
 
-        PRINT_MESSAGE("MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.");
-    }
+        LoadKey(pCipher, argc == 3 ? argv[2] : nullptr, pSolution0, pSolution1, pSolution2);
 
-    std::string PublicKeyString = cipher->ExportKeyString<RSACipher::KeyType::PublicKey, RSACipher::KeyFormat::PEM>();
-    if (PublicKeyString.empty()) {
-        REPORT_ERROR("ERROR: cipher->ExportKeyString failed.");
-        return false;
-    }
+        if (pSolution0.IsValid())
+            pSolution0->MakePatch(pCipher);
+        if (pSolution1.IsValid())
+            pSolution1->MakePatch(pCipher);
+        if (pSolution2.IsValid())
+            pSolution2->MakePatch(pCipher);
 
-    PRINT_MESSAGE("");
-    PRINT_MESSAGE("Your RSA public key:");
-    PRINT_MESSAGE(PublicKeyString.c_str());
-    return true;
+        if (pSolution0.IsValid())
+            puts("MESSAGE: PatchSolution0 has been applied.");
+        if (pSolution1.IsValid())
+            puts("MESSAGE: PatchSolution1 has been applied.");
+        if (pSolution2.IsValid())
+            puts("MESSAGE: PatchSolution2 has been applied.");
+
+        puts("MESSAGE: Patch has been done successfully. Have fun and enjoy~");
+
+        return 0;
+    } catch (Exception& e) {
+        ExceptionReport(e);
+        return static_cast<int>(e.ErrorCode());
+    }
 }
 
-int main(int argc, char* argv[], char* envp[]) {
-    int status = 0;
-    FileMapper MainApp;
-    off_t MainAppSize;
-    Helper::ResourceGuard<RSACipher> cipher(nullptr);
-    Helper::ResourceGuard<Patcher::Solution> pSolution0(nullptr);
-    Helper::ResourceGuard<Patcher::Solution> pSolution1(nullptr);
-
-    if (argc != 2 && argc != 3) {
-        help();
-        return status;
-    }
-
-    PRINT_MESSAGE("NOTICE:");
-    printf("This patcher will modify the file: %s\n", argv[1]);
-    PRINT_MESSAGE("Please make a backup by your own if you care. Otherwise just ignore this notice.");
-    PRINT_MESSAGE("Press Enter to continue OR Ctrl+C to abort...");
-    getchar();
-
-    cipher.ptr = RSACipher::Create();
-    if (cipher.ptr == nullptr) {
-        REPORT_ERROR("ERROR: RSACipher::Create failed.");
-        return status;
-    }
-    pSolution0.ptr = new Patcher::Solution0();
-    pSolution1.ptr = new Patcher::Solution1();
-
-    //
-    //  Map file
-    //
-    if (!MainApp.OpenFile(argv[1])) {
-        status = errno;
-        REPORT_ERROR_WITH_CODE("Failed to open file.");
-        return status;
-    } else {
-        PRINT_MESSAGE("MESSAGE: Open file successfully.");
-    }
-
-    if (!MainApp.GetFileSize(MainAppSize)) {
-        status = errno;
-        REPORT_ERROR_WITH_CODE("Failed to get file size.");
-        return status;
-    } else {
-        printf("MESSAGE: Get file size successfully: %lld\n", MainAppSize);
-    }
-
-    if (!MainApp.Map(static_cast<size_t>(MainAppSize))) {
-        status = errno;
-        REPORT_ERROR_WITH_CODE("Failed to map file.");
-        return status;
-    } else {
-        PRINT_MESSAGE("MESSAGE: Map file successfully.");
-    }
-
-    pSolution0.ptr->SetFile(&MainApp);
-    pSolution1.ptr->SetFile(&MainApp);
-
-    //
-    //  Find patch offsets
-    //
-    if (!pSolution0.ptr->FindPatchOffset()) {
-        PRINT_MESSAGE("MESSAGE: Solution0: Cannot find public key. Solution0 will be omitted.");
-        pSolution0.ptr->SetFile(nullptr);
-        SAFE_DELETE(pSolution0.ptr);
-    }
-
-    if (!pSolution1.ptr->FindPatchOffset()) {
-        PRINT_MESSAGE("MESSAGE: Solution1: Cannot find public key. Solution1 will be omitted.");
-        pSolution1.ptr->SetFile(nullptr);
-        SAFE_DELETE(pSolution1.ptr);
-    }
-
-    //
-    //  Load or generate RSA-2048 key
-    //
-    if (!LoadKey(cipher.ptr, argc == 3 ? argv[2] : nullptr, pSolution0.ptr, pSolution1.ptr))
-        return status;
-
-    //
-    //  Making patch
-    //
-    if (pSolution0.ptr && !pSolution0.ptr->MakePatch(cipher.ptr))
-        return status;
-    if (pSolution1.ptr && !pSolution1.ptr->MakePatch(cipher.ptr))
-        return status;
-
-    //
-    //  Report result
-    //
-    if (pSolution0.ptr)
-        PRINT_MESSAGE("Solution0 has been done successfully.");
-    if (pSolution1.ptr)
-        PRINT_MESSAGE("Solution1 has been done successfully.");
-
-    return status;
-}
