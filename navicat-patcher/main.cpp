@@ -2,13 +2,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include "PatchSolutions.hpp"
-#include "KeystoneAssembler.hpp"
 
 static void Welcome() {
     puts("***************************************************");
     puts("*       Navicat Patcher by @DoubleLabyrinth       *");
-    printf("*           Release date: %-24s*\n", __DATE__);
+    puts("*                  Version: 3.0                   *");
     puts("***************************************************");
     puts("");
     puts("Press Enter to continue or Ctrl + C to abort.");
@@ -18,11 +18,12 @@ static void Welcome() {
 static void Help() {
     puts("***************************************************");
     puts("*       Navicat Patcher by @DoubleLabyrinth       *");
-    printf("*           Release date: %-24s*\n", __DATE__);
+    puts("*                  Version: 3.0                   *");
     puts("***************************************************");
     puts("");
     puts("Usage:");
     puts("    navicat-patcher.exe <Navicat installation path> [RSA-2048 PEM file]");
+    puts("");
 }
 
 static void LoadKey(RSACipher* pCipher, const char* FileName,
