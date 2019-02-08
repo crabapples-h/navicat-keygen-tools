@@ -51,9 +51,9 @@ void PrintMemory(const void* from, const void* to, const void* base) {
         uint16_t value[16] = {};
 
         if (base_ptr)
-            printf("+0x%p  ", reinterpret_cast<const void*>(start - base_ptr));
+            printf("+0x%016zx  ", static_cast<size_t>(start - base_ptr));
         else
-            printf("0x%p  ", start);
+            printf("0x%016zx  ", reinterpret_cast<size_t>(start));
 
         for (int i = 0; i < 16; ++i) {
             if (ProbeForRead<uint8_t>(start + i, value + i)) {
