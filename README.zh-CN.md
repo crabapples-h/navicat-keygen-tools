@@ -6,12 +6,21 @@
 
 ## 1. 如何编译
 
-* 在编译之前，你应该确保你安装了`OpenSSL`和`rapidjson`。
+* 在编译之前，你应该确保你有如下几个库：
+
+  ```
+  openssl
+  capstone
+  keystone
+  rapidjson
+  ```
   
   如果你有`brew`的话，你可以通过
   
   ```
   $ brew install openssl
+  $ brew install capstone
+  $ brew install keystone
   $ brew install rapidjson
   ```
   
@@ -63,18 +72,113 @@
    $ ./navicat-patcher /Applications/Navicat\ Premium.app/Contents/MacOS/Navicat\ Premium
    ```
 
+   __Navicat Premium For Mac 12.1.15 简体中文版__ 已通过测试。下面将是一份样例输出：
+
+   ```
+   ***************************************************
+   *       Navicat Patcher by @DoubleLabyrinth       *
+   *                  Version: 3.0                   *
+   ***************************************************
+
+   Press Enter to continue or Ctrl + C to abort.
+
+   PatchSolution0 ...... Ready to apply.
+       Info: Keyword offset = +0x02d3c48c
+   PatchSolution1 ...... Omitted.
+   PatchSolution1 ...... Ready to apply.
+       Info: Target function offset = +0x00f650a2
+       Info: Keyword offset = +0x02ed1bc8
+       Info: std::string::append(const char*) offset = +02613e44
+   MESSAGE: Generating new RSA private key, it may take a long time.
+   MESSAGE: New RSA private key has been saved to RegPrivateKey.pem.
+
+   Your RSA public key:
+   -----BEGIN PUBLIC KEY-----
+   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt1haNfmdWMA2V11CqGIB
+   +vce/v0mulh5SNcpto6yaklyup6UO4ryVea9L2X8Tw2rh1xwcqJjD29a8MNaMB7B
+   6FbLAdLleNjcWBUSfWeomOIrWHtGIfUUyMLrFAhAx0Vj5EjTZVv3F7r1HaCUEyq9
+   wT3rC1XQs4YKzE9dL+sGXB+BuCg2l0eQPFojc+k48IbuMIUPqR63g9IfXtjqS6vt
+   6rbeWk3nB0QEzOVPVrrRP6sZAZzovY21ZQ/5cw6WE3x03SGtjbsS65KaHfUljHGH
+   IjQF0OhH7teS3AYGv7ydRUTRJ/nvT9JnWM7MQfJ8uq1Hc6JLW7sKhBNf/Ia6Tkvz
+   gwIDAQAB
+   -----END PUBLIC KEY-----
+
+   ****************************
+   *   Begin PatchSolution0   *
+   ****************************
+   @+0x02d3c48c
+   Previous:
+   +0x0000000002d3c480  73 0a 25 73 0a 25 73 0a 25 73 0a 00 2d 2d 2d 2d  s.%s.%s.%s..----
+   +0x0000000002d3c490  2d 42 45 47 49 4e 20 50 55 42 4c 49 43 20 4b 45  -BEGIN PUBLIC KE
+   +0x0000000002d3c4a0  59 2d 2d 2d 2d 2d 00 4d 49 49 42 49 6a 41 4e 42  Y-----.MIIBIjANB
+   +0x0000000002d3c4b0  67 6b 71 68 6b 69 47 39 77 30 42 41 51 45 46 41  gkqhkiG9w0BAQEFA
+   ...
+   ...
+   ...
+   After:
+   +0x0000000002d3c480  73 0a 25 73 0a 25 73 0a 25 73 0a 00 2d 2d 2d 2d  s.%s.%s.%s..----
+   +0x0000000002d3c490  2d 42 45 47 49 4e 20 50 55 42 4c 49 43 20 4b 45  -BEGIN PUBLIC KE
+   +0x0000000002d3c4a0  59 2d 2d 2d 2d 2d 00 4d 49 49 42 49 6a 41 4e 42  Y-----.MIIBIjANB
+   +0x0000000002d3c4b0  67 6b 71 68 6b 69 47 39 77 30 42 41 51 45 46 41  gkqhkiG9w0BAQEFA
+   ...
+   ...
+   ...
+
+   ****************************
+   *   Begin PatchSolution2   *
+   ****************************
+   @+0x02ed1bc8
+   Previous:
+   +0x0000000002ed1bc0  ee 00 00 00 17 00 00 00 42 49 6a 57 79 6f 65 52  ........BIjWyoeR
+   +0x0000000002ed1bd0  52 30 4e 42 67 6b 71 6e 44 5a 57 78 43 67 4b 43  R0NBgkqnDZWxCgKC
+   +0x0000000002ed1be0  45 41 77 31 64 71 46 33 44 54 76 4f 42 39 31 5a  EAw1dqF3DTvOB91Z
+   ...
+   ...
+   ...
+   After:
+   +0x0000000002ed1bc0  ee 00 00 00 17 00 00 00 4d 49 49 42 49 6a 41 4e  ........MIIBIjAN
+   +0x0000000002ed1bd0  42 67 6b 71 68 6b 69 47 39 77 30 42 41 51 45 46  BgkqhkiG9w0BAQEF
+   +0x0000000002ed1be0  41 41 4f 43 41 51 38 41 4d 49 49 42 43 67 4b 43  AAOCAQ8AMIIBCgKC
+   ...
+   ...
+   ...
+
+   @+0x00f650a2
+   Previous:
+   +0x0000000000f650a0  0f 0b 55 48 89 e5 41 57 41 56 53 48 83 ec 48 c6  ..UH..AWAVSH..H.
+   +0x0000000000f650b0  45 e5 01 31 c0 88 45 e6 48 89 fb 88 45 e7 0f 57  E..1..E.H...E..W
+   +0x0000000000f650c0  c0 48 8d 7d a0 0f 29 07 48 c7 47 10 00 00 00 00  .H.}..).H.G.....
+   +0x0000000000f650d0  48 8d 35 ef 74 e0 01 e8 68 ed 6a 01 e8 19 e8 00  H.5.t...h.j.....
+   +0x0000000000f650e0  00 88 45 e5 e8 77 e8 00 00 88 45 e6 e8 d5 e8 00  ..E..w....E.....
+   +0x0000000000f650f0  00 88 45 e7 f6 45 e7 01 0f 85 35 0c 00 00 f6 45  ..E..E....5....E
+   After:
+   +0x0000000000f650a0  0f 0b 55 48 89 e5 41 57 41 56 53 48 83 ec 48 48  ..UH..AWAVSH..HH
+   +0x0000000000f650b0  89 fb 48 31 c0 48 89 04 24 48 89 44 24 08 48 89  ..H1.H..$H.D$.H.
+   +0x0000000000f650c0  44 24 10 48 8d 3c 24 48 8d 35 fa ca f6 01 e8 71  D$.H.<$H.5.....q
+   +0x0000000000f650d0  ed 6a 01 48 8b 04 24 48 89 03 48 8b 44 24 08 48  .j.H..$H..H.D$.H
+   +0x0000000000f650e0  89 43 08 48 8b 44 24 10 48 89 43 10 48 89 d8 48  .C.H.D$.H.C.H..H
+   +0x0000000000f650f0  83 c4 48 5b 41 5e 41 5f 5d c3 35 0c 00 00 f6 45  ..H[A^A_].5....E
+
+   MESSAGE: PatchSolution0 has been applied.
+   MESSAGE: PatchSolution2 has been applied.
+   MESSAGE: Patch has been done successfully. Have fun and enjoy~
+   ```
+
    __仅对 Navicat Premium 版本 < 12.0.24 的说明：__
 
-   如果你的Navicat版本小于12.0.24，那么`navicat-patcher`将不会修改目标文件。但你必须使用openssl将`RegPrivateKey.pem`转化为`rpk`文件，并用转化得到的文件替换 
+   如果你的Navicat版本小于12.0.24，那么`navicat-patcher`将会终止并且不会修改目标文件。
+   
+   你必须使用openssl生成`RegPrivateKey.pem`和`rpk`文件：
+
+   ```shell
+   $ openssl genrsa -out RegPrivateKey.pem 2048
+   $ openssl rsa -in RegPrivateKey.pem -pubout -out rpk
+   ``` 
+
+   接着用刚生成的`rpk`文件替换
 
    ```
    /Applications/Navicat Premium.app/Contents/Resources/rpk
-   ```
-
-   如果你不知道怎么转化,这是一份样例：
-
-   ```bash
-   $ openssl rsa -in RegPrivateKey.pem -pubout -out rpk
    ```
 
 5. __生成一份自签名的代码证书，并总是信任该证书。这一步非常重要。__
