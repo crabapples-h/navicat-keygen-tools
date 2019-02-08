@@ -85,7 +85,7 @@ This repository will tell you how Navicat offline activation works.
    PatchSolution0 ...... Ready to apply.
        Info: Keyword offset = +0x02d3c48c
    PatchSolution1 ...... Omitted.
-   PatchSolution1 ...... Ready to apply.
+   PatchSolution2 ...... Ready to apply.
        Info: Target function offset = +0x00f650a2
        Info: Keyword offset = +0x02ed1bc8
        Info: std::string::append(const char*) offset = +02613e44

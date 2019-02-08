@@ -208,7 +208,7 @@ bool PatchSolution2::FindPatchOffset() noexcept {
     _$$_FunctionOffset = FunctionOffset;
     _$$_KeywordOffset = KeywordOffset;
     _$$_std_string_append_stub_Offset = std_string_append_stub_Offset;
-    printf("PatchSolution1 ...... Ready to apply.\n");
+    printf("PatchSolution2 ...... Ready to apply.\n");
     printf("    Info: Target function offset = +0x%08zx\n", _$$_FunctionOffset);
     printf("    Info: Keyword offset = +0x%08zx\n", _$$_KeywordOffset);
     printf("    Info: std::string::append(const char*) offset = +%08zx\n", _$$_std_string_append_stub_Offset);
