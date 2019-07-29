@@ -1,103 +1,76 @@
 #include "CapstoneDisassembler.hpp"
 
-CapstoneDisassembler::CapstoneDisassembler(const CapstoneEngine& Engine) :
-    _$$_ConstRef_Engine(Engine),
-    _$$_Context(InvalidContext),
-    _$$_InstructionContext(InvalidContext),
-    _$$_Instruction(nullptr)
-{
-    cs_insn* insn;
-    insn = cs_malloc(_$$_ConstRef_Engine.Handle());
-    if (insn == nullptr)
-        throw CapstoneError(__FILE__, __LINE__, cs_errno(_$$_ConstRef_Engine.Handle()),
-                            "cs_malloc fails.");
-    else
-        _$$_InstructionObj.TakeOver(insn);
+CapstoneDisassembler CapstoneDisassembler::Create(cs_arch ArchType, cs_mode Mode) {
+    CapstoneDisassembler NewDisassembler;
+
+    auto err = cs_open(ArchType, Mode, NewDisassembler.pvt_Handle.GetAddress());
+    if (err != CS_ERR_OK) {
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::CapstoneError(__FILE__, __LINE__, err, "cs_open failed.");
+    }
+
+    NewDisassembler.pvt_Insn.TakeOver(cs_malloc(NewDisassembler.pvt_Handle));
+    if (NewDisassembler.pvt_Insn.IsValid() == false) {
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::CapstoneError(__FILE__, __LINE__, cs_errno(NewDisassembler.pvt_Handle), "cs_malloc failed.");
+    }
+
+    return NewDisassembler;
 }
 
-void CapstoneDisassembler::SetContext(const uint8_t* Opcodes, size_t Size, uint64_t Address) noexcept {
-    _$$_Context.Opcodes.ConstPtr = Opcodes;
-    _$$_Context.OpcodesSize = Size;
-    _$$_Context.Address = Address;
-    _$$_InstructionContext = InvalidContext;
-    _$$_Instruction = nullptr;
+void CapstoneDisassembler::Option(cs_opt_type Type, size_t Value) {
+    auto err = cs_option(pvt_Handle, Type, Value);
+    if (err != CS_ERR_OK) {
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::CapstoneError(__FILE__, __LINE__, err, "cs_option failed.");
+    }
+
+    pvt_CurrentInsn = nullptr;
+
+    pvt_Insn.TakeOver(cs_malloc(pvt_Handle));
+    if (pvt_Insn.IsValid() == false) {
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::CapstoneError(__FILE__, __LINE__, cs_errno(pvt_Handle), "cs_malloc failed.");
+    }
 }
 
-void CapstoneDisassembler::SetContext(const CapstoneDisassembler::Context& Context) noexcept {
-    _$$_Context = Context;
-    _$$_InstructionContext = InvalidContext;
-    _$$_Instruction = nullptr;
+void CapstoneDisassembler::SetContext(uintptr_t lpOpcode, size_t cbOpcode, uint64_t Address) noexcept {
+    pvt_CurrentCtx.pbOpcode = reinterpret_cast<const uint8_t*>(lpOpcode);
+    pvt_CurrentCtx.cbOpcode = cbOpcode;
+    pvt_CurrentCtx.Address = Address;
+    pvt_CurrentInsn = nullptr;
+}
+
+void CapstoneDisassembler::SetContext(const void* lpOpcode, size_t cbOpcode, uint64_t Address) noexcept {
+    pvt_CurrentCtx.pbOpcode = reinterpret_cast<const uint8_t*>(lpOpcode);
+    pvt_CurrentCtx.cbOpcode = cbOpcode;
+    pvt_CurrentCtx.Address = Address;
+    pvt_CurrentInsn = nullptr;
 }
 
 const CapstoneDisassembler::Context& CapstoneDisassembler::GetContext() const noexcept {
-    return _$$_Context;
+    return pvt_CurrentCtx;
+}
+
+const cs_insn* CapstoneDisassembler::GetInstruction() const noexcept {
+    return pvt_CurrentInsn;
+}
+
+CapstoneDisassembler::Context CapstoneDisassembler::GetInstructionContext() const noexcept {
+    Context CtxOfInsn = {};
+    CtxOfInsn.pbOpcode = pvt_CurrentCtx.pbOpcode - pvt_CurrentInsn->size;
+    CtxOfInsn.cbOpcode = pvt_CurrentCtx.cbOpcode + pvt_CurrentInsn->size;
+    CtxOfInsn.Address = pvt_CurrentCtx.Address - pvt_CurrentInsn->size;
+    return CtxOfInsn;
 }
 
 bool CapstoneDisassembler::Next() noexcept {
-    Context InstructionContext = _$$_Context;
-    bool bSucceed = cs_disasm_iter(_$$_ConstRef_Engine.Handle(),
-                                   &_$$_Context.Opcodes.ConstPtr,
-                                   &_$$_Context.OpcodesSize,
-                                   &_$$_Context.Address,
-                                   _$$_InstructionObj);
+    bool bSucceed = cs_disasm_iter(pvt_Handle, &pvt_CurrentCtx.pbOpcode, &pvt_CurrentCtx.cbOpcode, &pvt_CurrentCtx.Address, pvt_Insn);
     if (bSucceed) {
-        _$$_InstructionContext = InstructionContext;
-        if (_$$_Instruction == nullptr)
-            _$$_Instruction = _$$_InstructionObj;
+        if (pvt_CurrentInsn == nullptr) pvt_CurrentInsn = pvt_Insn.Get();
     } else {
-        _$$_InstructionContext = InvalidContext;
-        _$$_Instruction = nullptr;
+        pvt_CurrentInsn = nullptr;
     }
     return bSucceed;
-}
-
-cs_insn* CapstoneDisassembler::GetInstruction() const noexcept {
-    return _$$_Instruction;
-}
-
-const CapstoneDisassembler::Context& CapstoneDisassembler::GetInstructionContext() const noexcept {
-    return _$$_InstructionContext;
-}
-
-CapstoneDisassembler::~CapstoneDisassembler() {
-    _$$_Context = InvalidContext;
-    _$$_InstructionContext = InvalidContext;
-    _$$_Instruction = nullptr;
-}
-
-CapstoneEngine::CapstoneEngine(cs_arch ArchType, cs_mode Mode) {
-    cs_err status;
-    csh handle;
-
-    status = cs_open(ArchType, Mode, &handle);
-    if (status != CS_ERR_OK)
-        throw CapstoneError(__FILE__, __LINE__, status,
-                            "cs_open fails.");
-    else
-        _$$_EngineObj.TakeOver(handle);
-}
-
-CapstoneEngine::CapstoneEngine(CapstoneEngine&& Other) noexcept :
-    _$$_EngineObj(std::move(Other._$$_EngineObj)) {}
-
-CapstoneEngine& CapstoneEngine::operator=(CapstoneEngine&& Other) noexcept {
-    _$$_EngineObj = std::move(Other._$$_EngineObj);
-    return *this;
-}
-
-csh CapstoneEngine::Handle() const noexcept {
-    return _$$_EngineObj;
-}
-
-void CapstoneEngine::Option(cs_opt_type Type, size_t Value) {
-    cs_err status;
-    status = cs_option(_$$_EngineObj, Type, Value);
-    if (status != CS_ERR_OK)
-        throw CapstoneError(__FILE__, __LINE__, status,
-                            "cs_open fails.");
-}
-
-CapstoneDisassembler CapstoneEngine::CreateDisassembler() const {
-    return CapstoneDisassembler(*this);
 }
 

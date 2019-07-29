@@ -1,5 +1,5 @@
 #include "PatchSolutions.hpp"
-#include "CapstoneDisassembler.hpp"
+#include <memory.h>
 
 const char PatchSolution2::Keyword[1114] =
     "BIjWyoeRR0NBgkqnDZWxCgKCEAw1dqF3DTvOB91ZHwecJYFrdM1KEh"
@@ -24,206 +24,120 @@ const char PatchSolution2::Keyword[1114] =
     "kCQa4leutETpKLJ2bYaOYBdoiBFOwvf36YaSuRoY4SP2x1pWOwGFTg"
     "d90J2uYyCqUa3Q3iX52iigT4EKL2vJKdJ";
 
-const uint8_t PatchSolution2::FunctionBeginByte[13] = {
+const uint8_t PatchSolution2::FunctionHeader[9] = {
     0x55,                   //  push rbp
     0x48, 0x89, 0xe5,       //  mov  rbp, rsp
     0x41, 0x57,             //  push r15
     0x41, 0x56,             //  push r14
     0x53,                   //  push rbx
-    0x48, 0x83, 0xec, 0x48  //  sub rsp, 0x48
 };
 
-const uint8_t PatchSolution2::FunctionHint[4] = {
-    0x64, 0x77, 0x4b, 0x42
-};
-
-bool PatchSolution2::IsStubHelperResolvedTo(const uint8_t* StubHelperProc, const char* Symbol) const {
-    CapstoneDisassembler Disassembler = _$$_CapstoneEngine.CreateDisassembler();
-    Disassembler.SetContext(StubHelperProc, 10);
-
-    if (!Disassembler.Next())
-        return false;
-
-    cs_insn* ins = Disassembler.GetInstruction();
-
-    //
-    // A stub helper proc must look like:
-    //     push xxxxxx; (xxxxx is a imm value)
-    //     jmp loc_xxxxx
-    //
-    if (strcasecmp(ins->mnemonic, "push") != 0 || ins->detail->x86.operands[0].type != X86_OP_IMM)
-        return false;
-
-    auto bind_opcodes_offset =
-        static_cast<uint32_t>(ins->detail->x86.operands[0].imm);
-    auto bind_opcodes_ptr =
-        _$$_FileViewHandle.ConstViewAtOffset<uint8_t>(
-            _$$_ImageInterpreter.DyldInfoCommand()->lazy_bind_off + bind_opcodes_offset
-        );
-
-    while ((*bind_opcodes_ptr & BIND_OPCODE_MASK) != BIND_OPCODE_DONE) {
-        switch (*bind_opcodes_ptr & BIND_OPCODE_MASK) {
-            case BIND_OPCODE_SET_DYLIB_ORDINAL_IMM:         // 0x10
-            case BIND_OPCODE_SET_DYLIB_SPECIAL_IMM:         // 0x30
-            case BIND_OPCODE_SET_TYPE_IMM:                  // 0x50
-            case BIND_OPCODE_DO_BIND:                       // 0x90
-            case BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED:   // 0xB0
-                ++bind_opcodes_ptr;
-                break;
-            case BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB:        // 0x20
-            case BIND_OPCODE_SET_ADDEND_SLEB:               // 0x60
-            case BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:   // 0x70
-            case BIND_OPCODE_ADD_ADDR_ULEB:                 // 0x80
-            case BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB:         // 0xA0
-                while(*(++bind_opcodes_ptr) & 0x80);
-                ++bind_opcodes_ptr;
-                break;
-            case BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM: // 0x40
-                return strcmp(reinterpret_cast<const char*>(bind_opcodes_ptr + 1), Symbol) == 0;
-            case BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB:  // 0xC0
-                //
-                // This opcode is too rare to appear,
-                // It is okay to dismiss this opcode
-                //
-                return false;
-            default:
-                return false;
-        }
-    }
-
-    return false;
-}
-
-PatchSolution2::PatchSolution2() :
-    _$$_FileViewHandle(MapViewTraits::InvalidValue),
-    _$$_CapstoneEngine(CS_ARCH_X86, CS_MODE_64),
-    _$$_KeystoneEngine(KS_ARCH_X86, KS_MODE_64),
-    _$$_FunctionOffset(InvalidOffset),
-    _$$_KeywordOffset(InvalidOffset),
-    _$$_std_string_append_stub_Offset(InvalidOffset)
+PatchSolution2::PatchSolution2(const X64ImageInterpreter& Image) noexcept :
+    pvt_Image(Image),
+    pvt_Disassembler(CapstoneDisassembler::Create(CS_ARCH_X86, CS_MODE_64)),
+    pvt_Assembler(KeystoneAssembler::Create(KS_ARCH_X86, KS_MODE_64)),
+    pvt_FunctionOffset(X64ImageInterpreter::InvalidOffset),
+    pvt_KeywordOffset(X64ImageInterpreter::InvalidOffset),
+    pvt_StdStringAppendStubRva(X64ImageInterpreter::InvalidAddress)
 {
-    _$$_CapstoneEngine.Option(CS_OPT_DETAIL, CS_OPT_ON);
-}
-
-void PatchSolution2::SetFile(const MapViewTraits::HandleType& FileViewHandle) noexcept {
-    _$$_FileViewHandle = FileViewHandle;
-    _$$_ImageInterpreter.LoadImage(FileViewHandle.View<void>());
-    _$$_FunctionOffset = InvalidOffset;
-    _$$_KeywordOffset = InvalidOffset;
-    _$$_std_string_append_stub_Offset = InvalidOffset;
+    pvt_Disassembler.Option(CS_OPT_DETAIL, CS_OPT_ON);
 }
 
 bool PatchSolution2::FindPatchOffset() noexcept {
-    if (_$$_FileViewHandle == MapViewTraits::InvalidValue)
-        return false;
+    auto FunctionOffset = X64ImageInterpreter::InvalidOffset;
+    auto KeywordOffset = X64ImageInterpreter::InvalidOffset;
+    auto StdStringAppendStubRva = X64ImageInterpreter::InvalidAddress;
 
-    size_t FunctionOffset = InvalidOffset;
-    size_t KeywordOffset = InvalidOffset;
-    size_t std_string_append_stub_Offset = InvalidOffset;
+    try {
+        auto Sec__text = pvt_Image.ImageSection("__TEXT", "__text");
+        auto Sec__const = pvt_Image.ImageSection("__TEXT", "__const");
+        auto Sec__stubs = pvt_Image.ImageSection("__TEXT", "__stubs");
+        auto SecView__text = pvt_Image.SectionView<uint8_t*>(Sec__text);
+        auto SecView__const = pvt_Image.SectionView<uint8_t*>(Sec__const);
+        auto SecView__stubs = pvt_Image.SectionView<uint8_t*>(Sec__stubs);
 
-    auto Sec__text = _$$_ImageInterpreter.SectionByName("__TEXT", "__text");
-    auto Sec__const = _$$_ImageInterpreter.SectionByName("__TEXT", "__const");
-    auto Sec__stubs = _$$_ImageInterpreter.SectionByName("__TEXT", "__stubs");
-    if (Sec__text == nullptr || Sec__const == nullptr || Sec__stubs == nullptr)
-        return false;
-    auto SecView__text = _$$_FileViewHandle.ConstView<uint8_t>() + Sec__text->offset;
-    auto SecView__const = _$$_FileViewHandle.ConstView<uint8_t>() + Sec__const->offset;
-    auto SecView__stubs = _$$_FileViewHandle.ConstView<uint8_t>() + Sec__stubs->offset;
+        KeywordOffset = pvt_Image.SearchSectionOffset("__TEXT", "__const", [](const uint8_t* p) {
+            return memcmp(p, Keyword, sizeof(Keyword)) == 0;
+        });
 
-    for (uint64_t i = 0; i < Sec__text->size; ++i) {
-        if (memcmp(SecView__text + i, FunctionHint, sizeof(FunctionHint)) == 0) {
-            // we only allow that deviation is +-0x20
-            for (uint64_t j = i - FunctionHintOffset - 0x20; j < i - FunctionHintOffset + 0x20; ++j) {
-                if (memcmp(SecView__text + j,
-                           FunctionBeginByte,
-                           sizeof(FunctionBeginByte)) == 0) {
-                    FunctionOffset = static_cast<size_t>(Sec__text->offset + j);
+        auto KeywordRva = pvt_Image.OffsetToRva(KeywordOffset);
+
+        auto Hint = pvt_Image.SearchSectionOffset("__TEXT", "__text", [Sec__text, SecView__text, KeywordRva](const uint8_t* p) {
+            auto rip = (p - SecView__text) + Sec__text->addr + 4;
+            auto off = *reinterpret_cast<const uint32_t*>(p);
+            return rip + off == KeywordRva;
+        }) - 0xc0;
+
+        for (uint32_t i = 0; i < 0xc0; ++i) {
+            if (memcmp(pvt_Image.ImageOffset(Hint + i), FunctionHeader, sizeof(FunctionHeader)) == 0) {
+                FunctionOffset = Hint + i;
+                break;
+            }
+        }
+
+        if (FunctionOffset == X64ImageInterpreter::InvalidOffset) {
+            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+            throw nkg::Exception(__FILE__, __LINE__, "Not found.");
+        }
+
+        pvt_Disassembler.SetContext(SecView__stubs, Sec__stubs->size, Sec__stubs->addr);
+        while (pvt_Disassembler.Next()) {
+            auto insn = pvt_Disassembler.GetInstruction();
+
+            //
+            // As far as I know, all stub functions have a pattern looking like:
+            //     jmp qword ptr [RIP + xxxx]
+            //
+            if (strcasecmp(insn->mnemonic, "jmp") == 0 && insn->detail->x86.operands[0].type == X86_OP_MEM && insn->detail->x86.operands[0].mem.base == X86_REG_RIP) {
+                uint64_t la_symbol_ptr_rva = pvt_Disassembler.GetContext().Address + insn->detail->x86.operands[0].mem.disp;
+                uint32_t la_symbol_ptr_offset = pvt_Image.RvaToOffset(la_symbol_ptr_rva);
+                if (la_symbol_ptr_offset == X64ImageInterpreter::InvalidOffset)
+                    continue;
+
+                uint64_t stub_helper_rva = *pvt_Image.ImageOffset<const uint64_t*>(la_symbol_ptr_offset);
+                uint32_t stub_helper_offset = pvt_Image.RvaToOffset(stub_helper_rva);
+                if (stub_helper_offset == X64ImageInterpreter::InvalidOffset)
+                    continue;
+
+                //
+                // __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc
+                //     is the mangled name of "std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::append(char const*)",
+                //     which is, as known as, "std::string::append(const char*)"
+                // You can demangle it by c++flit
+                // e.g.
+                //     c++filt -_ '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc'
+                //
+                if (nkg::IsResolvedTo(pvt_Image, pvt_Image.ImageOffset(stub_helper_offset), "__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc")) {
+                    auto StdStringAppendStubOffset = pvt_Disassembler.GetInstructionContext().pbOpcode - pvt_Image.ImageBase<const uint8_t*>();
+                    StdStringAppendStubRva = pvt_Image.OffsetToRva(StdStringAppendStubOffset);
                     break;
                 }
             }
-            if (FunctionOffset != InvalidOffset)
-                break;
         }
-    }
 
-    if (FunctionOffset == InvalidOffset) {
-        printf("PatchSolution2 ...... Omitted.\n");
+        if (StdStringAppendStubRva == X64ImageInterpreter::InvalidAddress) {
+            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+            throw nkg::Exception(__FILE__, __LINE__, "Not found.");
+        }
+
+        pvt_FunctionOffset = FunctionOffset;
+        pvt_KeywordOffset = KeywordOffset;
+        pvt_StdStringAppendStubRva = StdStringAppendStubRva;
+
+        printf("[+] PatchSolution2 ...... Ready to apply.\n");
+        printf("    Function offset = +0x%.8x\n", pvt_FunctionOffset);
+        printf("    Keyword offset = +0x%.8x\n", pvt_KeywordOffset);
+        printf("    std::string::append(const char*) RVA = 0x%.16llx\n", pvt_StdStringAppendStubRva);
+        return true;
+    } catch (...) {
+        printf("[-] PatchSolution2 ...... Omitted.\n");
         return false;
     }
-
-    for (uint64_t i = 0; i < Sec__const->size; ++i) {
-        if (memcmp(SecView__const + i, Keyword, KeywordLength) == 0) {
-            KeywordOffset = static_cast<size_t>(Sec__const->offset + i);
-            break;
-        }
-    }
-
-    if (KeywordOffset == InvalidOffset) {
-        printf("PatchSolution2 ...... Omitted.\n");
-        return false;
-    }
-
-    CapstoneDisassembler Disassembler = _$$_CapstoneEngine.CreateDisassembler();
-    Disassembler.SetContext(SecView__stubs, Sec__stubs->size, Sec__stubs->addr);
-
-    while (Disassembler.Next()) {
-        auto ins = Disassembler.GetInstruction();
-        //
-        // As far as I know, all stub functions have a pattern looking like:
-        //     jmp qword ptr [RIP + xxxx]
-        //
-        if (strcasecmp(ins->mnemonic, "jmp") == 0 && ins->detail->x86.operands[0].type == X86_OP_MEM && ins->detail->x86.operands[0].mem.base == X86_REG_RIP) {
-            uint64_t la_symbol_ptr_rva = Disassembler.GetContext().Address + ins->detail->x86.operands[0].mem.disp;
-            uint32_t la_symbol_ptr_offset = _$$_ImageInterpreter.AddressToOffset(la_symbol_ptr_rva);
-            if (la_symbol_ptr_offset == X64ImageInterpreter::InvalidOffset)
-                continue;
-
-            uint64_t stub_helper_rva = *_$$_FileViewHandle.ConstViewAtOffset<uint64_t>(la_symbol_ptr_offset);
-            uint32_t stub_helper_offset = _$$_ImageInterpreter.AddressToOffset(stub_helper_rva);
-            if (stub_helper_offset == X64ImageInterpreter::InvalidOffset)
-                continue;
-
-            //
-            // __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc
-            //     is the mangled name of "std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::append(char const*)",
-            //     which is, as known as, "std::string::append(const char*)"
-            // You can demangle it by c++flit
-            // e.g.
-            //     c++filt -_ '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc'
-            //
-            if (IsStubHelperResolvedTo(_$$_FileViewHandle.ConstViewAtOffset<uint8_t>(stub_helper_offset),
-                                       "__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEPKc")) {
-                std_string_append_stub_Offset =
-                    Disassembler.GetInstructionContext().Opcodes.ConstPtr - _$$_FileViewHandle.ConstView<uint8_t>();
-                break;
-            }
-        }
-    }
-
-    if (std_string_append_stub_Offset == InvalidOffset) {
-        printf("PatchSolution2 ...... Omitted.\n");
-        return false;
-    }
-
-    _$$_FunctionOffset = FunctionOffset;
-    _$$_KeywordOffset = KeywordOffset;
-    _$$_std_string_append_stub_Offset = std_string_append_stub_Offset;
-    printf("PatchSolution2 ...... Ready to apply.\n");
-    printf("    Info: Target function offset = +0x%08zx\n", _$$_FunctionOffset);
-    printf("    Info: Keyword offset = +0x%08zx\n", _$$_KeywordOffset);
-    printf("    Info: std::string::append(const char*) offset = +%08zx\n", _$$_std_string_append_stub_Offset);
-    return true;
 }
 
-bool PatchSolution2::CheckKey(RSACipher* pCipher) const {
-    if (_$$_FileViewHandle == MapViewTraits::InvalidValue ||
-        _$$_FunctionOffset == InvalidOffset ||
-        _$$_KeywordOffset == InvalidOffset)
-        throw Exception(__FILE__, __LINE__,
-                        "PatchSolution2::MakePatch is not ready.");
-
-    std::string PublicKeyPEM =
-        pCipher->ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
+[[nodiscard]]
+bool PatchSolution2::CheckKey(const RSACipher& RsaCipher) const noexcept {
+    std::string PublicKeyPEM = RsaCipher.ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
 
     PublicKeyPEM.erase(PublicKeyPEM.find("-----BEGIN PUBLIC KEY-----"), 26);
     PublicKeyPEM.erase(PublicKeyPEM.find("-----END PUBLIC KEY-----"), 24);
@@ -237,23 +151,19 @@ bool PatchSolution2::CheckKey(RSACipher* pCipher) const {
     return PublicKeyPEM.length() == 0x188;
 }
 
-void PatchSolution2::MakePatch(RSACipher* pCipher) const {
-    if (_$$_FileViewHandle == MapViewTraits::InvalidValue ||
-        _$$_FunctionOffset == InvalidOffset ||
-        _$$_KeywordOffset == InvalidOffset ||
-        _$$_std_string_append_stub_Offset == InvalidOffset)
+void PatchSolution2::MakePatch(const RSACipher& RsaCipher) const {
+    if (pvt_FunctionOffset == X64ImageInterpreter::InvalidOffset ||
+        pvt_KeywordOffset == X64ImageInterpreter::InvalidOffset ||
+        pvt_StdStringAppendStubRva == X64ImageInterpreter::InvalidAddress)
     {
-        throw Exception(__FILE__, __LINE__,
-                        "Invalid patch offset.");
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::Exception(__FILE__, __LINE__, "PatchSolution2 is not ready.");
     }
-
-    auto ViewPtr = _$$_FileViewHandle.View<uint8_t>();
 
     //
     //  Prepare public key string
     //
-    std::string PublicKeyPEM =
-        pCipher->ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
+    std::string PublicKeyPEM = RsaCipher.ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
 
     PublicKeyPEM.erase(PublicKeyPEM.find("-----BEGIN PUBLIC KEY-----"), 26);
     PublicKeyPEM.erase(PublicKeyPEM.find("-----END PUBLIC KEY-----"), 24);
@@ -269,14 +179,8 @@ void PatchSolution2::MakePatch(RSACipher* pCipher) const {
     //
     //  Prepare new function opcodes
     //
-    KeystoneAssembler Assembler = _$$_KeystoneEngine.CreateAssembler();
-
-    uint64_t FunctionRVA = _$$_ImageInterpreter.OffsetToAddress(static_cast<uint32_t>(_$$_FunctionOffset));
-    uint64_t KeywordRVA = _$$_ImageInterpreter.OffsetToAddress(static_cast<uint32_t>(_$$_KeywordOffset));
-    uint64_t std_string_append_stub_RVA = _$$_ImageInterpreter.OffsetToAddress(static_cast<uint32_t>(_$$_std_string_append_stub_Offset));
-    assert(FunctionRVA != X64ImageInterpreter::InvalidAddress);
-    assert(KeywordRVA != X64ImageInterpreter::InvalidAddress);
-    assert(std_string_append_stub_RVA != X64ImageInterpreter::InvalidAddress);
+    uint64_t FunctionRVA = pvt_Image.OffsetToRva(pvt_FunctionOffset);
+    uint64_t KeywordRVA = pvt_Image.OffsetToRva(pvt_KeywordOffset);
 
     char AssemblyCode[512] = {};
     sprintf(AssemblyCode,
@@ -289,14 +193,14 @@ void PatchSolution2::MakePatch(RSACipher* pCipher) const {
 
             "mov rbx, rdi;"
 
-            "xor rax, rax;"
+            "xor rax, rax;"                   // initialize std::string with null
             "mov qword ptr[rsp], rax;"
             "mov qword ptr[rsp + 0x8], rax;"
             "mov qword ptr[rsp + 0x10], rax;"
 
             "lea rdi, qword ptr[rsp];"
-            "lea rsi, qword ptr[0x%016llx];"  // filled with address to Keyword
-            "call 0x%016llx;"                 // filled with address to std::string::append(const char*)
+            "lea rsi, qword ptr[0x%.16llx];"  // filled with address to Keyword
+            "call 0x%.16llx;"                 // filled with address to std::string::append(const char*)
 
             "mov rax, qword ptr[rsp];"
             "mov qword ptr[rbx], rax;"
@@ -313,42 +217,40 @@ void PatchSolution2::MakePatch(RSACipher* pCipher) const {
             "pop rbp;"
             "ret;",
             KeywordRVA,
-            std_string_append_stub_RVA);
+            pvt_StdStringAppendStubRva
+        );
 
-    auto NewFunctionOpcodes = Assembler.OpCodes(AssemblyCode, FunctionRVA);
+    auto NewFunctionOpcode = pvt_Assembler.GenerateOpcode(AssemblyCode, FunctionRVA);
 
-    puts("****************************");
-    puts("*   Begin PatchSolution2   *");
-    puts("****************************");
-    printf("@+0x%08zx\n", _$$_KeywordOffset);
+    auto pbFunctionPatch = pvt_Image.ImageOffset<uint8_t*>(pvt_FunctionOffset);
+    auto pbKeywordPatch = pvt_Image.ImageOffset<uint8_t*>(pvt_KeywordOffset);
+
+    puts("**************************************************************");
+    puts("*                      PatchSolution2                        *");
+    puts("**************************************************************");
+    printf("@+0x%.8x\n", pvt_KeywordOffset);
+
     puts("Previous:");
-    PrintMemory(ViewPtr + _$$_KeywordOffset,
-                ViewPtr + _$$_KeywordOffset + KeywordLength,
-                ViewPtr);
-    memcpy(ViewPtr + _$$_KeywordOffset,
-           PublicKeyPEM.c_str(),
-           PublicKeyPEM.length() + 1);  // with null-terminator
+    nkg::PrintMemory(pbKeywordPatch, pbKeywordPatch + sizeof(Keyword) - 1, pbKeywordPatch);
+
+    memcpy(pbKeywordPatch, PublicKeyPEM.c_str(), PublicKeyPEM.length() + 1);  // with a null-terminator
 
     puts("After:");
-    PrintMemory(ViewPtr + _$$_KeywordOffset,
-                ViewPtr + _$$_KeywordOffset + KeywordLength,
-                ViewPtr);
+    nkg::PrintMemory(pbKeywordPatch, pbKeywordPatch + sizeof(Keyword) - 1, pbKeywordPatch);
+
+
+
+
     puts("");
+    printf("@+0x%.8x\n", pvt_FunctionOffset);
 
-    printf("@+0x%08zx\n", _$$_FunctionOffset);
     puts("Previous:");
-    PrintMemory(ViewPtr + _$$_FunctionOffset,
-                ViewPtr + _$$_FunctionOffset + NewFunctionOpcodes.size(),
-                ViewPtr);
+    nkg::PrintMemory(pbFunctionPatch, pbFunctionPatch + NewFunctionOpcode.size(), pbFunctionPatch);
 
-    memcpy(ViewPtr + _$$_FunctionOffset,
-           NewFunctionOpcodes.data(),
-           NewFunctionOpcodes.size());
+    memcpy(pbFunctionPatch, NewFunctionOpcode.data(), NewFunctionOpcode.size());
 
     puts("After:");
-    PrintMemory(ViewPtr + _$$_FunctionOffset,
-                ViewPtr + _$$_FunctionOffset + NewFunctionOpcodes.size(),
-                ViewPtr);
+    nkg::PrintMemory(pbFunctionPatch, pbFunctionPatch + NewFunctionOpcode.size(), pbFunctionPatch);
+
     puts("");
 }
-

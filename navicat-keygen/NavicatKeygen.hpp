@@ -144,7 +144,7 @@ public:
     }
 
     void Generate() {
-        static const_DES_cblock DESKey = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
+        static uint8_t DESKey[] = { 0x64, 0xAD, 0xF3, 0x2F, 0xAE, 0xF2, 0x1A, 0x27 };
         DESCipher cipher;
 
         data[2] = static_cast<uint8_t>(rand(rand_eng));

@@ -1,5 +1,5 @@
 #include "PatchSolutions.hpp"
-#include <assert.h>
+#include <memory.h>
 
 const char PatchSolution0::Keyword[452] =
     "-----BEGIN PUBLIC KEY-----\x00"
@@ -12,85 +12,67 @@ const char PatchSolution0::Keyword[452] =
     "awIDAQAB\x00"
     "-----END PUBLIC KEY-----\x00";
 
-PatchSolution0::PatchSolution0() noexcept :
-    _$$_FileViewHandle(MapViewTraits::InvalidValue),
-    _$$_PatchOffset(InvalidOffset) {}
-
-void PatchSolution0::SetFile(const MapViewTraits::HandleType& FileViewHandle) noexcept {
-    _$$_FileViewHandle = FileViewHandle;
-    _$$_PatchOffset = InvalidOffset;
-}
+PatchSolution0::PatchSolution0(const X64ImageInterpreter& Image) noexcept :
+    pvt_Image(Image),
+    pvt_PatchOffset(X64ImageInterpreter::InvalidOffset) {}
 
 bool PatchSolution0::FindPatchOffset() noexcept {
-    if (_$$_FileViewHandle == MapViewTraits::InvalidValue)
-        return false;
+    try {
+        pvt_PatchOffset = pvt_Image.SearchSectionOffset("__TEXT", "__cstring", [](const uint8_t* p) {
+            return memcmp(p, Keyword, sizeof(Keyword) - 1) == 0;
+        });
 
-    auto ViewPtr = _$$_FileViewHandle.ConstView<uint8_t>();
-    size_t ViewSize = _$$_FileViewHandle.Size();
-
-    if (ViewSize < KeywordLength)
-        return false;
-
-    _$$_PatchOffset = InvalidOffset;
-
-    ViewSize -= KeywordLength;
-    for (size_t i = 0; i < ViewSize; ++i) {
-        if (ViewPtr[i] == Keyword[0] && memcmp(ViewPtr + i, Keyword, KeywordLength) == 0) {
-            _$$_PatchOffset = i;
-            break;
-        }
-    }
-
-    if (_$$_PatchOffset != InvalidOffset) {
-        printf("PatchSolution0 ...... Ready to apply.\n");
-        printf("    Info: Keyword offset = +0x%08zx\n", _$$_PatchOffset);
+        printf("[+] PatchSolution0 ...... Ready to apply.\n");
+        printf("    Keyword offset = +0x%.8x\n", pvt_PatchOffset);
         return true;
-    } else {
-        printf("PatchSolution0 ...... Omitted.\n");
+    } catch (...) {
+        printf("[-] PatchSolution0 ...... Omitted.\n");
         return false;
     }
 }
 
-// PatchSolution0 only requires a 2048-bit RSA key
-bool PatchSolution0::CheckKey(RSACipher* pCipher) const {
-    std::string PublicKeyPEM =
-        pCipher->ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
-    return PublicKeyPEM.length() == KeywordLength;
+bool PatchSolution0::CheckKey(const RSACipher& RsaCipher) const noexcept {
+    try {
+        if (RsaCipher.Bits() != 2048) {
+            return false;
+        }
+
+        std::string PublicKeyPEM = RsaCipher.ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
+        for (auto& c : PublicKeyPEM) {
+            if (c == '\n') c = '\x00';
+        }
+
+        return PublicKeyPEM.length() == sizeof(Keyword) - 1;
+    } catch (...) {
+        return false;
+    }
 }
 
-void PatchSolution0::MakePatch(RSACipher* pCipher) const {
-    if (_$$_FileViewHandle == MapViewTraits::InvalidValue || _$$_PatchOffset == InvalidOffset)
-        throw Exception(__FILE__, __LINE__,
-                        "PatchSolution0::MakePatch is not ready.");
-
-    uint8_t* ViewPtr = _$$_FileViewHandle.View<uint8_t>();
-    std::string PublicKeyPEM =
-        pCipher->ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
-
-    for (size_t i = 0; i < PublicKeyPEM.length(); ++i) {
-        if (PublicKeyPEM[i] == '\n')
-            PublicKeyPEM[i] = '\x00';
+void PatchSolution0::MakePatch(const RSACipher& RsaCipher) const {
+    if (pvt_PatchOffset == X64ImageInterpreter::InvalidOffset) {
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::Exception(__FILE__, __LINE__, "PatchSolution0 is not ready.");
     }
 
-    assert(PublicKeyPEM.length() == KeywordLength);
+    std::string PublicKeyPEM = RsaCipher.ExportKeyString<RSAKeyType::PublicKey, RSAKeyFormat::PEM>();
+    for (auto& c : PublicKeyPEM) {
+        if (c == '\n') c = '\x00';
+    }
 
-    puts("****************************");
-    puts("*   Begin PatchSolution0   *");
-    puts("****************************");
-    printf("@+0x%08zx\n", _$$_PatchOffset);
+    auto pbPatch = pvt_Image.ImageOffset<uint8_t*>(pvt_PatchOffset);
+
+    puts("**************************************************************");
+    puts("*                      PatchSolution0                        *");
+    puts("**************************************************************");
+    printf("@+0x%.8x\n", pvt_PatchOffset);
+
     puts("Previous:");
-    PrintMemory(ViewPtr + _$$_PatchOffset,
-                ViewPtr + _$$_PatchOffset + KeywordLength,
-                ViewPtr);
+    nkg::PrintMemory(pbPatch, pbPatch + sizeof(Keyword), pbPatch);
 
-    memcpy(ViewPtr + _$$_PatchOffset,
-           PublicKeyPEM.c_str(),
-           KeywordLength);
+    memcpy(pbPatch, PublicKeyPEM.data(), PublicKeyPEM.size());
 
     puts("After:");
-    PrintMemory(ViewPtr + _$$_PatchOffset,
-                ViewPtr + _$$_PatchOffset + KeywordLength,
-                ViewPtr);
+    nkg::PrintMemory(pbPatch, pbPatch + sizeof(Keyword), pbPatch);
+
     puts("");
 }
-

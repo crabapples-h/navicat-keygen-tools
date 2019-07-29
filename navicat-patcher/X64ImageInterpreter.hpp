@@ -1,191 +1,199 @@
 #pragma once
-#include <string.h>
+#include <string.h> // NOLINT
 #include <mach-o/loader.h>
 #include <mach-o/nlist.h>
 #include <vector>
 #include <map>
-
-#include "Exception.hpp"
+#include "../common/Exception.hpp"
 
 class X64ImageInterpreter {
 public:
     static constexpr uint64_t InvalidAddress = static_cast<uint64_t>(-1);
     static constexpr uint32_t InvalidOffset = static_cast<uint32_t>(-1);
 private:
-    mach_header_64*                     _$$_MachHeader;
-    std::vector<segment_command_64*>    _$$_SegmentCommands;
-    std::map<size_t, section_64*>       _$$_SectionIndexTable;
-    std::map<uint64_t, section_64*>     _$$_SectionMapTable;
-    std::map<uint32_t, section_64*>     _$$_SectionOffsetTable;
-    dysymtab_command*                   _$$_DySymTabCommand;
-    symtab_command*                     _$$_SymTabCommand;
-    char*                               _$$_StringTable;
-    nlist_64*                           _$$_SymbolTable;
-    dyld_info_command*                  _$$_DyldInfoCommand;
-public:
+
+    mach_header_64*                     pvt_MachHeader;
+    std::vector<segment_command_64*>    pvt_SegmentCommands;
+
+    struct {
+        std::map<size_t, section_64*>   ByIndex;
+        std::map<uint64_t, section_64*> ByMapAddress;
+        std::map<uint32_t, section_64*> ByFileOffset;
+    } pvt_Sections;
+
+    struct {
+        dysymtab_command* SegmentCommand;
+    } pvt_DynamicSymbol;
+
+    struct {
+        symtab_command* SegmentCommand;
+        char*           StringTable;
+        nlist_64*       SymbolTable;
+    } pvt_Symbol;
+
+    struct {
+        dyld_info_command* SegmentCommand;
+    } pvt_DynamicLoaderInfoOnly;
 
     X64ImageInterpreter() :
-        _$$_MachHeader(nullptr),
-        _$$_DySymTabCommand(nullptr),
-        _$$_SymTabCommand(nullptr),
-        _$$_StringTable(nullptr),
-        _$$_SymbolTable(nullptr),
-        _$$_DyldInfoCommand(nullptr) {}
+        pvt_MachHeader(nullptr),
+        pvt_DynamicSymbol{},
+        pvt_Symbol{},
+        pvt_DynamicLoaderInfoOnly{} {}
 
-    void LoadImage(void* ImageBase) {
-        mach_header_64*                     MachHeader = nullptr;
-        std::vector<segment_command_64*>    SegmentComamnds;
-        std::map<size_t, section_64*>       SectionIndexTable;
-        std::map<uint64_t, section_64*>     SectionMapTable;
-        std::map<uint32_t, section_64*>     SectionOffsetTable;
-        dysymtab_command*                   DySymTabCommand = nullptr;
-        symtab_command*                     SymTabCommand = nullptr;
-        char*                               StringTable = nullptr;
-        nlist_64*                           SymbolTable = nullptr;
-        dyld_info_command*                  DyldInfoCommand = nullptr;
+public:
 
-        MachHeader = reinterpret_cast<mach_header_64*>(ImageBase);
-        if (MachHeader->magic != MH_MAGIC_64) {
-            throw Exception(__FILE__, __LINE__,
-                            "Bad Image");
-        }
+    [[nodiscard]]
+    static X64ImageInterpreter Parse(void* ImageBase);
 
-        auto cmd_p = reinterpret_cast<load_command*>(MachHeader + 1);
-        for (uint32_t i = 0; i < MachHeader->ncmds; ++i) {
-            if (cmd_p->cmd == LC_SEGMENT_64) {
-                auto segcmd_p = reinterpret_cast<segment_command_64*>(cmd_p);
-                auto sec_p = reinterpret_cast<section_64*>(segcmd_p + 1);
-
-                SegmentComamnds.emplace_back(segcmd_p);
-
-                for (uint32_t j = 0; j < segcmd_p->nsects; ++j) {
-                    SectionIndexTable[SectionIndexTable.size()] = &sec_p[j];
-                    SectionMapTable[sec_p[j].addr] = &sec_p[j];
-                    SectionOffsetTable[sec_p[j].offset] = &sec_p[j];
-                }
-            } else if (cmd_p->cmd == LC_DYSYMTAB) {
-                DySymTabCommand = reinterpret_cast<dysymtab_command*>(cmd_p);
-            } else if (cmd_p->cmd == LC_SYMTAB) {
-                SymTabCommand = reinterpret_cast<symtab_command*>(cmd_p);
-                StringTable = reinterpret_cast<char*>(ImageBase) + SymTabCommand->stroff;
-                SymbolTable = reinterpret_cast<nlist_64*>(reinterpret_cast<uint8_t*>(ImageBase) + SymTabCommand->symoff);
-            } else if (cmd_p->cmd == LC_DYLD_INFO_ONLY) {
-                DyldInfoCommand = reinterpret_cast<dyld_info_command*>(cmd_p);
-            }
-
-            cmd_p = reinterpret_cast<load_command*>(
-                reinterpret_cast<uint8_t*>(cmd_p) + cmd_p->cmdsize
-            );
-        }
-
-        std::swap(_$$_MachHeader, MachHeader);
-        std::swap(_$$_SegmentCommands, SegmentComamnds);
-        std::swap(_$$_SectionIndexTable, SectionIndexTable);
-        std::swap(_$$_SectionMapTable, SectionMapTable);
-        std::swap(_$$_SectionOffsetTable, SectionOffsetTable);
-        std::swap(_$$_DySymTabCommand, DySymTabCommand);
-        std::swap(_$$_SymTabCommand, SymTabCommand);
-        std::swap(_$$_StringTable, StringTable);
-        std::swap(_$$_SymbolTable, SymbolTable);
-        std::swap(_$$_DyldInfoCommand, DyldInfoCommand);
+    template<typename __ReturnType = void*>
+    [[nodiscard]]
+    __ReturnType ImageBase() const noexcept {
+        static_assert(std::is_pointer_v<__ReturnType>);
+        return reinterpret_cast<__ReturnType>(pvt_MachHeader);
     }
 
-    dysymtab_command* DySymTabCommand() const noexcept {
-        return _$$_DySymTabCommand;
+    template<typename __ReturnType = void*>
+    [[nodiscard]]
+    __ReturnType ImageOffset(size_t Offset) const noexcept {
+        static_assert(std::is_pointer_v<__ReturnType>);
+        return reinterpret_cast<__ReturnType>(
+            reinterpret_cast<uint8_t*>(pvt_MachHeader) + Offset
+        );
     }
 
-    symtab_command* SymTabCommand() const noexcept {
-        return _$$_SymTabCommand;
-    }
-
-    dyld_info_command* DyldInfoCommand() const noexcept {
-        return _$$_DyldInfoCommand;
-    }
-
-    uint64_t OffsetToAddress(uint32_t Offset) const {
-        auto sec_p = SectionByOffset(Offset);
-        if (sec_p) {
-            return sec_p->addr + (Offset - sec_p->offset);
-        } else {
-            return InvalidAddress;
-        }
-    }
-
-    uint32_t AddressToOffset(uint64_t Address) const {
-        auto sec_p = SectionByAddress(Address);
-        if (sec_p) {
-            return sec_p->offset + static_cast<uint32_t>(Address - sec_p->addr);
-        } else {
-            return InvalidOffset;
-        }
-    }
-
-    section_64* SectionByIndex(size_t Index) const {
-        auto it = _$$_SectionIndexTable.find(Index);
-        return it != _$$_SectionIndexTable.cend() ? it->second : nullptr;
-    }
-
-    section_64* SectionByName(const char* SegmentName, const char* SectionName) const {
-        if (_$$_MachHeader == nullptr)
-            return nullptr;
-
-        for (auto segcmd_p : _$$_SegmentCommands) {
-            if (strncmp(SegmentName, segcmd_p->segname, 16) == 0) {
-                auto sec_p = reinterpret_cast<section_64*>(segcmd_p + 1);
-                for (uint32_t j = 0; j < segcmd_p->nsects; ++j) {
-                    if (strncmp(SectionName, sec_p[j].sectname, 16) == 0)
-                        return &sec_p[j];
-                }
-                return nullptr;
-            }
-        }
-
-        return nullptr;
-    }
-
-    section_64* SectionByOffset(uint32_t Offset) const {
-        if (!_$$_SectionOffsetTable.empty()) {
-            auto upper = _$$_SectionOffsetTable.upper_bound(Offset);
-            if (upper == _$$_SectionOffsetTable.cbegin())
-                return nullptr;
-            auto lower = std::prev(upper);
-
-            if (lower->second->offset <= Offset && Offset < lower->second->offset + lower->second->size) {
-                return lower->second;
-            } else {
-                return nullptr;
-            }
+    template<unsigned __CommandMacro>
+    [[nodiscard]]
+    auto CommandOf() const noexcept {
+        if constexpr (__CommandMacro == LC_DYSYMTAB) {
+            return pvt_DynamicSymbol.SegmentCommand;
+        } else if constexpr (__CommandMacro == LC_SYMTAB) {
+            return pvt_Symbol.SegmentCommand;
+        } else if constexpr (__CommandMacro == LC_DYLD_INFO_ONLY) { // NOLINT
+            return pvt_DynamicLoaderInfoOnly.SegmentCommand;
         } else {
             return nullptr;
         }
     }
 
-    section_64* SectionByAddress(uint64_t Address) const {
-        if (!_$$_SectionMapTable.empty()) {
-            auto upper = _$$_SectionMapTable.upper_bound(Address);
-            if (upper == _$$_SectionMapTable.cbegin())
-                return nullptr;
-            auto lower = std::prev(upper);
+    [[nodiscard]]
+    size_t NumberOfSections() const noexcept;
 
-            if (lower->second->addr <= Address && Address < lower->second->addr + lower->second->size) {
-                return lower->second;
-            } else {
-                return nullptr;
+    [[nodiscard]]
+    section_64* ImageSection(size_t Index) const;
+
+    [[nodiscard]]
+    section_64* ImageSection(const char* SegmentName, const char* SectionName) const;
+
+    [[nodiscard]]
+    section_64* ImageSectionByOffset(uint32_t Offset) const;
+
+    [[nodiscard]]
+    section_64* ImageSectionByRva(uint64_t Rva) const;
+
+    template<typename __ReturnType>
+    [[nodiscard]]
+    __ReturnType SectionView(size_t Index) const {
+        auto Section = ImageSection(Index);
+        return ImageOffset<__ReturnType>(Section->offset);
+    }
+
+    template<typename __ReturnType>
+    [[nodiscard]]
+    __ReturnType SectionView(const char* SegmentName, const char* SectionName) const {
+        auto Section = ImageSection(SegmentName, SectionName);
+        return ImageOffset<__ReturnType>(Section->offset);
+    }
+
+    template<typename __ReturnType>
+    [[nodiscard]]
+    __ReturnType SectionView(section_64* Section) const {
+        return ImageOffset<__ReturnType>(Section->offset);
+    }
+
+    template<typename __ReturnType, typename __Hint>
+    [[nodiscard]]
+    __ReturnType SearchSection(size_t Index, __Hint&& Hint) const {
+        return SearchSection<__ReturnType>(ImageSection(Index), std::forward<__Hint>(Hint));
+    }
+
+    template<typename __ReturnType, typename __Hint>
+    [[nodiscard]]
+    __ReturnType SearchSection(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
+        return SearchSection<__ReturnType>(ImageSection(SegmentName, SectionName), std::forward<__Hint>(Hint));
+    }
+
+    template<typename __ReturnType, typename __Hint>
+    [[nodiscard]]
+    __ReturnType SearchSection(section_64* Section, __Hint&& Hint) const {
+        static_assert(std::is_pointer_v<__ReturnType>);
+
+        auto begin = SectionView<const uint8_t*>(Section);
+        auto end = begin + Section->size;
+
+        for (; begin < end; ++begin) {
+            if (Hint(begin) == true) {
+                return reinterpret_cast<__ReturnType>(const_cast<uint8_t*>(begin));
             }
-        } else {
-            return nullptr;
         }
+
+        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
+        throw nkg::Exception(__FILE__, __LINE__, "Data is not found.");
     }
 
-    nlist_64* SymbolTable() const noexcept {
-        return _$$_SymbolTable;
+    template<typename __Hint>
+    [[nodiscard]]
+    uint32_t SearchSectionOffset(size_t Index, __Hint&& Hint) const {
+        return SearchSection<uint8_t*>(Index, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
     }
 
+    template<typename __Hint>
+    [[nodiscard]]
+    uint32_t SearchSectionOffset(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
+        return SearchSection<uint8_t*>(SegmentName, SectionName, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
+    }
+
+    template<typename __Hint>
+    [[nodiscard]]
+    uint32_t SearchSectionOffset(section_64* Section, __Hint&& Hint) const {
+        return SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
+    }
+
+    template<typename __Hint>
+    [[nodiscard]]
+    uint64_t SearchSectionRva(size_t Index, __Hint&& Hint) const {
+        auto Section = ImageSection(Index);
+        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
+        return Section->addr + Offset;
+    }
+
+    template<typename __Hint>
+    [[nodiscard]]
+    uint64_t SearchSectionRva(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
+        auto Section = ImageSection(SegmentName, SectionName);
+        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
+        return Section->addr + Offset;
+    }
+
+    template<typename __Hint>
+    [[nodiscard]]
+    uint64_t SearchSectionRva(section_64* Section, __Hint&& Hint) const {
+        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
+        return Section->addr + Offset;
+    }
+
+    [[nodiscard]]
+    uint64_t OffsetToRva(uint32_t Offset) const;
+
+    [[nodiscard]]
+    uint32_t RvaToOffset(uint64_t Address) const;
+
+    [[nodiscard]]
+    nlist_64* ImageSymbolTable() const noexcept;
+
+    [[nodiscard]]
     char* LookupStringTable(size_t Offset) const noexcept {
-        return _$$_StringTable + Offset;
-    }
-
-    ~X64ImageInterpreter() {
-        _$$_MachHeader = nullptr;
+        return pvt_Symbol.StringTable + Offset;
     }
 };
+

@@ -22,16 +22,16 @@ public:
         OPENSSL_cleanse(&_Schedule, sizeof(_Schedule));
     }
 
-    void EncryptBlock(void* pBuffer) noexcept {
+    void EncryptBlock(void* lpBuffer) noexcept {
         DES_cblock block;
-        DES_ecb_encrypt(reinterpret_cast<const_DES_cblock*>(pBuffer), &block, &_Schedule, DES_ENCRYPT);
-        memcpy(pBuffer, &block, sizeof(block));
+        DES_ecb_encrypt(reinterpret_cast<const_DES_cblock*>(lpBuffer), &block, &_Schedule, DES_ENCRYPT);
+        memcpy(lpBuffer, &block, sizeof(block));
     }
 
-    void DecryptBlock(void* pBuffer) noexcept {
+    void DecryptBlock(void* lpBuffer) noexcept {
         DES_cblock block;
-        DES_ecb_encrypt(reinterpret_cast<const_DES_cblock*>(pBuffer), &block, &_Schedule, DES_DECRYPT);
-        memcpy(pBuffer, &block, sizeof(block));
+        DES_ecb_encrypt(reinterpret_cast<const_DES_cblock*>(lpBuffer), &block, &_Schedule, DES_DECRYPT);
+        memcpy(lpBuffer, &block, sizeof(block));
     }
 
     ~DESCipher() noexcept {
