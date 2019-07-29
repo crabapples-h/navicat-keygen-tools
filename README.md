@@ -33,7 +33,7 @@ __NOTICE: This keygen only supports Navicat Premium.__
 * Clone `mac` branch and build keygen and patcher:
 
   ```shell
-  $ git clone -b mac https://github.com/DoubleLabyrinth/navicat-keygen.git
+  $ git clone -b mac --single-branch https://github.com/DoubleLabyrinth/navicat-keygen.git
   $ cd navicat-keygen
   $ make all
   ```
