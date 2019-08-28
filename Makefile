@@ -1,6 +1,13 @@
 CC = g++
 OPENSSL_INCLUDE_PATH = /usr/local/opt/openssl/include
 OPENSSL_LIB_PATH = /usr/local/opt/openssl/lib
+CAPSTONE_INCLUDE_PATH = #/usr/local/Cellar/capstone/4.0.1/include
+CAPSTONE_LIB_PATH = #/usr/local/Cellar/capstone/4.0.1/lib
+KEYSTONE_INCLUDE_PATH = #/usr/local/Cellar/keystone/0.9.1/include
+KEYSTONE_LIB_PATH = #/usr/local/Cellar/keystone/0.9.1/lib
+RAPIDJSON_INCLUDE_PATH = #/usr/local/Cellar/rapidjson/1.1.0/include
+LIBPLIST_INCLUDE_PATH = #/usr/local/Cellar/libplist/2.0.0_1/include
+LIBPLIST_LIB_PATH = #/usr/local/Cellar/libplist/2.0.0_1/lib
 
 OUTPUT_DIR = ./bin/
 COMMON_DIR = ./common/
@@ -51,11 +58,19 @@ KEYGEN_BINARY = $(OUTPUT_DIR)navicat-keygen
 
 patcher: $(PATCHER_HEADER) $(PATCHER_SOURCE)
 	@if [ ! -d $(OUTPUT_DIR) ]; then mkdir -p $(OUTPUT_DIR); fi
-	$(CC) -std=c++17 -O2 -I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) -lcrypto -lcapstone -lkeystone -lplist++ $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
+	$(CC) -std=c++17 -O2 \
+-I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) \
+$(if $(CAPSTONE_INCLUDE_PATH),-I$(CAPSTONE_INCLUDE_PATH),) $(if $(CAPSTONE_LIB_PATH),-L$(CAPSTONE_LIB_PATH),) \
+$(if $(KEYSTONE_INCLUDE_PATH),-I$(KEYSTONE_INCLUDE_PATH),) $(if $(KEYSTONE_LIB_PATH),-L$(KEYSTONE_LIB_PATH),) \
+$(if $(LIBPLIST_INCLUDE_PATH),-I$(LIBPLIST_INCLUDE_PATH),) $(if $(LIBPLIST_LIB_PATH),-I$(LIBPLIST_LIB_PATH),) \
+-lcrypto -lcapstone -lkeystone -lplist++ $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
+	@echo
 
 keygen: $(KEYGEM_HEADER) $(KEYGEN_SOURCE)
 	@if [ ! -d $(OUTPUT_DIR) ]; then mkdir -p $(OUTPUT_DIR); fi
-	$(CC) -std=c++17 -O2 -I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) -lcrypto $(KEYGEN_SOURCE) -o $(KEYGEN_BINARY)
+	$(CC) -std=c++17 -O2 \
+-I$(OPENSSL_INCLUDE_PATH) -L$(OPENSSL_LIB_PATH) \
+-lcrypto $(KEYGEN_SOURCE) -o $(KEYGEN_BINARY)
 
 all: patcher keygen
 	@echo 'Done.'
