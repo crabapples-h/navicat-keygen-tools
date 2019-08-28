@@ -174,8 +174,6 @@ void PatchSolution2::MakePatch(const RSACipher& RsaCipher) const {
         }
     }
 
-    assert(PublicKeyPEM.length() == 0x188);
-
     //
     //  Prepare new function opcodes
     //
