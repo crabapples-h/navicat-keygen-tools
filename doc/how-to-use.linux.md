@@ -30,7 +30,7 @@
    > The 64-bit executable file is downloaded here. If you use 32-bit, please download the corresponding version.
 
    ```console
-   $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/download/v3.1/navicat-keygen-for-x64.zip && \
+   $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip && \
    unzip navicat-keygen-for-x64.zip
    ```
 

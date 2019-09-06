@@ -28,7 +28,7 @@
     > 此处下载的是64位的可执行文件，若您使用32位，请下载对应版本
 
     ```console
-    $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/download/v3.1/navicat-keygen-for-x64.zip && \
+    $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip && \
     unzip navicat-keygen-for-x64.zip
     ```
 
