@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{290c5d5e-52d2-4fef-909f-27fd95ae0af9}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)bytearray.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Exception.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ExceptionOpenssl.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ExceptionUser.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ExceptionWin32.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceOwned.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceTraitsOpenssl.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceTraitsWin32.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)RSACipher.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)xstring.hpp" />
+  </ItemGroup>
+</Project>
