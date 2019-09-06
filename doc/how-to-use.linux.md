@@ -11,8 +11,8 @@
 1. Switch to the path you extracted the installation package. Run Navicat, for initialization:
 
    ```console
-   $ cd ~/navicat121_premium_en_x64 && \
-   ./start_navicat
+   $ cd ~/navicat121_premium_en_x64
+   $ ./start_navicat
    ```
 
    When running for the first time, you will be prompted with the following two windows, click "Cancel" to:
@@ -30,17 +30,17 @@
    > The 64-bit executable file is downloaded here. If you use 32-bit, please download the corresponding version.
 
    ```console
-   $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip && \
-   unzip navicat-keygen-for-x64.zip
+   $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip
+   $ unzip navicat-keygen-for-x64.zip
    ```
 
 3. Download `navicat-pacther.sh` and `navicat-keygen.sh`:
 
    ```console
-   $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-patcher.sh && \
-   chmod +x navicat-patcher.sh && \
-   curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-keygen.sh && \
-   chmod +x navicat-keygen.sh
+   $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-patcher.sh
+   $ chmod +x navicat-patcher.sh
+   $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-keygen.sh
+   $ chmod +x navicat-keygen.sh
    ```
 
 4. Use `navicat-patcher.exe` to replace __Navicat Activation Public Key__ that is stored in `navicat.exe` or `libcc.dll`.

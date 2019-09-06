@@ -9,8 +9,8 @@
 1. 切换到解压安装包的路径，本示例解压到了 `家目录`，运行Navicat，使其初始化环境：
 
     ```console
-    $ cd ~/navicat121_premium_en_x64 && \
-    ./start_navicat
+    $ cd ~/navicat121_premium_en_x64
+    $ ./start_navicat
     ```
 
     首次启动时，会提示如下两个窗口，点击“Cancel”即可：
@@ -28,17 +28,17 @@
     > 此处下载的是64位的可执行文件，若您使用32位，请下载对应版本
 
     ```console
-    $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip && \
-    unzip navicat-keygen-for-x64.zip
+    $ curl -O -L https://github.com/DoubleLabyrinth/navicat-keygen/releases/latest/download/navicat-keygen-for-x64.zip
+    $ unzip navicat-keygen-for-x64.zip
     ```
 
 3. 下载 `navicat-pacther.sh` 和 `navicat-keygen.sh`：
 
     ```console
-    $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-patcher.sh && \
-    chmod +x navicat-patcher.sh && \
-    curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-keygen.sh && \
-    chmod +x navicat-keygen.sh
+    $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-patcher.sh
+    $ chmod +x navicat-patcher.sh
+    $ curl -O -L https://raw.githubusercontent.com/DoubleLabyrinth/navicat-keygen/windows/bash/navicat-keygen.sh
+    $ chmod +x navicat-keygen.sh
     ```
 
 4. 使用 `navicat-patcher.exe` 替换掉 `navicat.exe` 和 `libcc.dll` 里的Navicat激活公钥。 
