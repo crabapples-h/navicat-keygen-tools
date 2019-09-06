@@ -4,7 +4,7 @@
 
 This repository will tell you how Navicat offline activation works.
 
-Previous code is archived in [`windows-archived`](https://github.com/DoubleLabyrinth/navicat-keygen/tree/windows-archived) branch for the reason that previos code contains 3rd binary libraries and it gets quite big :-(.
+Previous code is archived in [`windows-archived`](https://github.com/DoubleLabyrinth/navicat-keygen/tree/windows-archived) branch for the reason that previous code contains 3rd binary libraries and it gets quite big :-(
 
 When you git-clone this repo, please add `--single-branch` flag so that archived branch won't be cloned to your computer, which saves your time and disk.
 
