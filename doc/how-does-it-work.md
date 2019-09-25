@@ -210,18 +210,18 @@
 
   4. __data[7]__ is Navicat product ID. (Thanks @dragonflylee and @Deltafox79)
 
-     |Product Name         |Enterprise|Standard|Educational|Essentials|
-     |---------------------|:--------:|:------:|:---------:|:--------:|
-     |Navicat Report Viewer|0x0B      |        |           |          |
-     |Navicat Data Modeler |          |0x47    |0x4A       |          |
-     |Navicat Premium      |0x65      |        |0x66       |0x67      |
-     |Navicat MySQL        |0x68      |0x69    |0x6A       |0x6B      |
-     |Navicat PostgreSQL   |0x6C      |0x6D    |0x6E       |0x6F      |
-     |Navicat Oracle       |0x70      |0x71    |0x72       |0x73      |
-     |Navicat SQL Server   |0x74      |0x75    |0x76       |0x77      |
-     |Navicat SQLite       |0x78      |0x79    |0x7A       |0x7B      |
-     |Navicat MariaDB      |0x7C      |0x7D    |0x7E       |0x7F      |
-     |Navicat MongoDB      |0x80      |0x81    |0x82       |          |
+     |Product Name          |Enterprise|Standard|Educational|Essentials|
+     |----------------------|:--------:|:------:|:---------:|:--------:|
+     |Navicat Report Viewer |0x0B      |        |           |          |
+     |Navicat Data Modeler 3|          |0x84    |0x85       |          |
+     |Navicat Premium       |0x65      |        |0x66       |0x67      |
+     |Navicat MySQL         |0x68      |0x69    |0x6A       |0x6B      |
+     |Navicat PostgreSQL    |0x6C      |0x6D    |0x6E       |0x6F      |
+     |Navicat Oracle        |0x70      |0x71    |0x72       |0x73      |
+     |Navicat SQL Server    |0x74      |0x75    |0x76       |0x77      |
+     |Navicat SQLite        |0x78      |0x79    |0x7A       |0x7B      |
+     |Navicat MariaDB       |0x7C      |0x7D    |0x7E       |0x7F      |
+     |Navicat MongoDB       |0x80      |0x81    |0x82       |          |
 
   5. High 4 bits of __data[8]__ represents __major version number__. 
    
