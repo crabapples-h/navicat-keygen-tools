@@ -87,7 +87,7 @@ namespace nkg {
     void SerialNumberGenerator::SetProductSignature(NavicatProductType ProductType) noexcept {
         switch (ProductType) {
             case NavicatProductType::DataModeler:
-                _Data[7] = 0x47;
+                _Data[7] = 0x84;
                 break;
             case NavicatProductType::Premium:
                 _Data[7] = 0x65;

@@ -210,18 +210,18 @@
 
   4. __data[7]__ 是Navicat产品ID。（感谢 @dragonflylee 和 @Deltafox79提供的数据）
 
-     |产品名                |Enterprise|Standard|Educational|Essentials|
-     |---------------------|:--------:|:------:|:---------:|:--------:|
-     |Navicat Report Viewer|0x0B      |        |           |          |
-     |Navicat Data Modeler |          |0x47    |0x4A       |          |
-     |Navicat Premium      |0x65      |        |0x66       |0x67      |
-     |Navicat MySQL        |0x68      |0x69    |0x6A       |0x6B      |
-     |Navicat PostgreSQL   |0x6C      |0x6D    |0x6E       |0x6F      |
-     |Navicat Oracle       |0x70      |0x71    |0x72       |0x73      |
-     |Navicat SQL Server   |0x74      |0x75    |0x76       |0x77      |
-     |Navicat SQLite       |0x78      |0x79    |0x7A       |0x7B      |
-     |Navicat MariaDB      |0x7C      |0x7D    |0x7E       |0x7F      |
-     |Navicat MongoDB      |0x80      |0x81    |0x82       |          |
+     |产品名                 |Enterprise|Standard|Educational|Essentials|
+     |----------------------|:--------:|:------:|:---------:|:--------:|
+     |Navicat Report Viewer |0x0B      |        |           |          |
+     |Navicat Data Modeler 3|          |0x84    |0x85       |          |
+     |Navicat Premium       |0x65      |        |0x66       |0x67      |
+     |Navicat MySQL         |0x68      |0x69    |0x6A       |0x6B      |
+     |Navicat PostgreSQL    |0x6C      |0x6D    |0x6E       |0x6F      |
+     |Navicat Oracle        |0x70      |0x71    |0x72       |0x73      |
+     |Navicat SQL Server    |0x74      |0x75    |0x76       |0x77      |
+     |Navicat SQLite        |0x78      |0x79    |0x7A       |0x7B      |
+     |Navicat MariaDB       |0x7C      |0x7D    |0x7E       |0x7F      |
+     |Navicat MongoDB       |0x80      |0x81    |0x82       |          |
 
   5. __data[8]__ 的高4位代表 __版本号__。低4位未知，但可以用来延长激活期限，可取的值有`0000`和`0001`。
 
