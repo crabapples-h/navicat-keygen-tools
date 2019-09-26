@@ -49,7 +49,7 @@ namespace nkg {
 
         CapstoneEngine(cs_arch ArchType, cs_mode Mode);
 
-        void Option(cs_opt_type Type, size_t Value);
+        void Option(cs_opt_type Type, cs_opt_value Value);
 
         [[nodiscard]]
         CapstoneDisassembler CreateDisassembler() const;
