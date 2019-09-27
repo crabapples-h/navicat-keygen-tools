@@ -298,6 +298,7 @@ namespace nkg {
         return IsRvaRangeInRelocTable(FileOffsetToRva(FileOffset), Size);
     }
 
+    [[nodiscard]]
     DWORD ImageInterpreter::ImageFileMajorVersion() const {
         if (_VsFixedFileInfo) {
             return _VsFixedFileInfo->dwFileVersionMS;
@@ -306,6 +307,7 @@ namespace nkg {
         }
     }
 
+    [[nodiscard]]
     DWORD ImageInterpreter::ImageFileMinorVersion() const {
         if (_VsFixedFileInfo) {
             return _VsFixedFileInfo->dwFileVersionLS;
@@ -314,6 +316,7 @@ namespace nkg {
         }
     }
 
+    [[nodiscard]]
     DWORD ImageInterpreter::ImageProductMajorVersion() const {
         if (_VsFixedFileInfo) {
             return _VsFixedFileInfo->dwProductVersionMS;
@@ -322,12 +325,18 @@ namespace nkg {
         }
     }
 
+    [[nodiscard]]
     DWORD ImageInterpreter::ImageProductMinorVersion() const {
         if (_VsFixedFileInfo) {
             return _VsFixedFileInfo->dwProductVersionLS;
         } else {
             throw Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("Image does not have version info."));
         }
+    }
+
+    [[nodiscard]]
+    size_t ImageInterpreter::NumberOfSections() const noexcept {
+        return _NtHeaders->FileHeader.NumberOfSections;
     }
 }
 

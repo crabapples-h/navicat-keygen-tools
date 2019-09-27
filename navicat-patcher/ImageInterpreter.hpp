@@ -229,6 +229,9 @@ namespace nkg {
 
         [[nodiscard]]
         DWORD ImageProductMinorVersion() const;
+
+        [[nodiscard]]
+        size_t NumberOfSections() const noexcept;
     };
 
 }
