@@ -51,6 +51,8 @@ namespace nkg {
 
         void Option(cs_opt_type Type, cs_opt_value Value);
 
+        const char* GetRegisterName(unsigned int reg_id) const noexcept;
+
         [[nodiscard]]
         CapstoneDisassembler CreateDisassembler() const;
     };

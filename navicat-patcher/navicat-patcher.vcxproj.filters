@@ -51,6 +51,18 @@
     <ClCompile Include="CapstoneDisassembler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="PatchSolution4-generic.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchSolution4-amd64.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="KeystoneAssembler.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchSolution4-i386.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NavicatCrypto.hpp">
@@ -72,6 +84,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Misc.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KeystoneAssembler.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ExceptionKeystone.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceTraitsKeystone.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

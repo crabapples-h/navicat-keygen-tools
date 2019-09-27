@@ -2,6 +2,7 @@
 #include <RSACipher.hpp>
 #include "ImageInterpreter.hpp"
 #include "CapstoneDisassembler.hpp"
+#include "KeystoneAssembler.hpp"
 #include "Misc.hpp"
 
 namespace nkg {
@@ -189,6 +190,38 @@ namespace nkg {
         PatchSolution3(const ImageInterpreter& Image);
 
         PatchSolution3(const ImageInterpreter* lpImage);
+
+        [[nodiscard]]
+        virtual bool FindPatchOffset() noexcept override;
+
+        [[nodiscard]]
+        virtual bool CheckKey(const RSACipher& Cipher) const noexcept override;
+
+        virtual void MakePatch(const RSACipher& Cipher) const override;
+    };
+
+    //
+    // PatchSolution3 will replace the RSA public key stored in libcc.dll
+    // For Navicat Data Modeler 3
+    //
+    class PatchSolution4 : public PatchSolution {
+    private:
+
+        static const uint8_t KeywordA[0x188];
+        static const uint8_t KeywordB[0x188];
+
+        const ImageInterpreter& _Image;
+        CapstoneEngine          _DisassemblyEngine;
+        KeystoneEngine          _AssemblyEngine;
+        uint8_t*                _pbPatchMachineCode;
+        uint8_t*                _pbPatchNewPublicKey;
+        std::vector<uint8_t>    _NewMachineCode;
+
+    public:
+
+        PatchSolution4(const ImageInterpreter& Image);
+
+        PatchSolution4(const ImageInterpreter* lpImage);
 
         [[nodiscard]]
         virtual bool FindPatchOffset() noexcept override;

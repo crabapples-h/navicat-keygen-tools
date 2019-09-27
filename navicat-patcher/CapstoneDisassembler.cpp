@@ -86,6 +86,10 @@ namespace nkg {
         }
     }
 
+    const char* CapstoneEngine::GetRegisterName(unsigned int reg_id) const noexcept {
+        return cs_reg_name(Get(), reg_id);
+    }
+
     [[nodiscard]]
     CapstoneDisassembler CapstoneEngine::CreateDisassembler() const {
         return CapstoneDisassembler(*this);

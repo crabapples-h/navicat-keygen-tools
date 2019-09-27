@@ -131,7 +131,8 @@ static void LoadKey(
     nkg::PatchSolution* pSolution0,
     nkg::PatchSolution* pSolution1,
     nkg::PatchSolution* pSolution2,
-    nkg::PatchSolution* pSolution3) 
+    nkg::PatchSolution* pSolution3,
+    nkg::PatchSolution* pSolution4) 
 {
     if (KeyFilePath.empty() == false) {
         LOG_HINT(0, "Import RSA-2048 key from %s", KeyFilePath.c_str());
@@ -141,7 +142,8 @@ static void LoadKey(
         if (pSolution0 && !pSolution0->CheckKey(Cipher) ||
             pSolution1 && !pSolution1->CheckKey(Cipher) ||
             pSolution2 && !pSolution2->CheckKey(Cipher) ||
-            pSolution3 && !pSolution3->CheckKey(Cipher)) 
+            pSolution3 && !pSolution3->CheckKey(Cipher) ||
+            pSolution4 && !pSolution4->CheckKey(Cipher))
         {
             throw nkg::Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("The RSA private key you provide cannot be used."));
         }
@@ -153,7 +155,8 @@ static void LoadKey(
         } while (pSolution0 && !pSolution0->CheckKey(Cipher) ||
                  pSolution1 && !pSolution1->CheckKey(Cipher) ||
                  pSolution2 && !pSolution2->CheckKey(Cipher) ||
-                 pSolution3 && !pSolution3->CheckKey(Cipher));   // re-generate RSA key if one of 'CheckKey's return false
+                 pSolution3 && !pSolution3->CheckKey(Cipher) ||
+                 pSolution4 && !pSolution4->CheckKey(Cipher));   // re-generate RSA key if one of 'CheckKey's return false
     }
 
     LOG_HINT(0, "Your RSA public key:\n%hs", Cipher.ExportKeyString<nkg::RSAKeyType::PublicKey, nkg::RSAKeyFormat::PEM>().c_str());
@@ -207,6 +210,7 @@ int _tmain(int argc, PTSTR argv[]) {
             ResourceOwned lpSolution1(CppObjectTraits<nkg::PatchSolution>{});
             ResourceOwned lpSolution2(CppObjectTraits<nkg::PatchSolution>{});
             ResourceOwned lpSolution3(CppObjectTraits<nkg::PatchSolution>{});
+            ResourceOwned lpSolution4(CppObjectTraits<nkg::PatchSolution>{});
 
             //
             // Open main application
@@ -316,6 +320,7 @@ int _tmain(int argc, PTSTR argv[]) {
                 lpSolution1.TakeOver(new nkg::PatchSolution1(lpLibccDllInterpreter));
                 lpSolution2.TakeOver(new nkg::PatchSolution2(lpLibccDllInterpreter));
                 lpSolution3.TakeOver(new nkg::PatchSolution3(lpLibccDllInterpreter));
+                lpSolution4.TakeOver(new nkg::PatchSolution4(lpLibccDllInterpreter));
             }
 
             //
@@ -338,6 +343,10 @@ int _tmain(int argc, PTSTR argv[]) {
                 lpSolution3.Release();
             }
 
+            if (lpSolution4.IsValid() && lpSolution4->FindPatchOffset() == false) {
+                lpSolution4.Release();
+            }
+
             _putts(TEXT(""));
 
             //
@@ -345,7 +354,7 @@ int _tmain(int argc, PTSTR argv[]) {
             //
             SelectPatchSolutions(lpSolution0, lpSolution1, lpSolution2, lpSolution3);
 
-            if (lpSolution0.IsValid() == false && lpSolution1.IsValid() == false && lpSolution2.IsValid() == false && lpSolution3.IsValid() == false) {
+            if (lpSolution0.IsValid() == false && lpSolution1.IsValid() == false && lpSolution2.IsValid() == false && lpSolution3.IsValid() == false && lpSolution4.IsValid() == false) {
                 throw nkg::Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("No patch applied. Patch abort!"))
                     .AddHint(TEXT("Are you sure your Navicat has not been patched/modified before?"));
             }
@@ -359,14 +368,14 @@ int _tmain(int argc, PTSTR argv[]) {
                 NavicatBackupDetect(MainExePath);
             }
 
-            if (lpSolution1.IsValid() || lpSolution2.IsValid() || lpSolution3.IsValid()) {
+            if (lpSolution1.IsValid() || lpSolution2.IsValid() || lpSolution3.IsValid() || lpSolution4.IsValid()) {
                 NavicatBackupDetect(LibccDllPath);
             }
 
             //
             // Loading key
             //
-            LoadKey(Cipher, RsaPrivateKeyPath, lpSolution0, lpSolution1, lpSolution2, lpSolution3);
+            LoadKey(Cipher, RsaPrivateKeyPath, lpSolution0, lpSolution1, lpSolution2, lpSolution3, lpSolution4);
 
             if (bDryRun == false) {
                 //
@@ -383,7 +392,7 @@ int _tmain(int argc, PTSTR argv[]) {
                     NavicatBackupMake(MainExePath);
                 }
 
-                if (lpSolution1.IsValid() || lpSolution2.IsValid() || lpSolution3.IsValid()) {
+                if (lpSolution1.IsValid() || lpSolution2.IsValid() || lpSolution3.IsValid() || lpSolution4.IsValid()) {
                     NavicatBackupMake(LibccDllPath);
                 }
 
@@ -404,6 +413,10 @@ int _tmain(int argc, PTSTR argv[]) {
 
                 if (lpSolution3.IsValid()) {
                     lpSolution3->MakePatch(Cipher);
+                }
+
+                if (lpSolution4.IsValid()) {
+                    lpSolution4->MakePatch(Cipher);
                 }
                 
                 if (RsaPrivateKeyPath.empty()) {

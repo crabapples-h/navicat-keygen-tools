@@ -168,6 +168,7 @@
   <ItemGroup>
     <ClCompile Include="CapstoneDisassembler.cpp" />
     <ClCompile Include="ImageInterpreter.cpp" />
+    <ClCompile Include="KeystoneAssembler.cpp" />
     <ClCompile Include="Misc.cpp" />
     <ClCompile Include="PatchSolution0.cpp" />
     <ClCompile Include="PatchSolution1.cpp" />
@@ -189,16 +190,28 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="PatchSolution4-amd64.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="PatchSolution4-generic.cpp" />
+    <ClCompile Include="PatchSolution4-i386.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="_tmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CapstoneDisassembler.hpp" />
     <ClInclude Include="ExceptionCapstone.hpp" />
+    <ClInclude Include="ExceptionKeystone.hpp" />
     <ClInclude Include="ImageInterpreter.hpp" />
+    <ClInclude Include="KeystoneAssembler.hpp" />
     <ClInclude Include="Misc.hpp" />
     <ClInclude Include="NavicatCrypto.hpp" />
     <ClInclude Include="PatchSolutions.hpp" />
     <ClInclude Include="ResourceTraitsCapstone.hpp" />
+    <ClInclude Include="ResourceTraitsKeystone.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
