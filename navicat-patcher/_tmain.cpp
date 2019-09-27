@@ -18,7 +18,7 @@
 static void Welcome() {
     _putts(TEXT("***************************************************"));
     _putts(TEXT("*       Navicat Patcher by @DoubleLabyrinth       *"));
-    _putts(TEXT("*                  Version: 4.0                   *"));
+    _putts(TEXT("*                  Version: 4.1                   *"));
     _putts(TEXT("***************************************************"));
     _putts(TEXT(""));
     _putts(TEXT("Press Enter to continue or Ctrl + C to abort."));
@@ -29,7 +29,7 @@ static void Welcome() {
 static void Help() {
     _putts(TEXT("***************************************************"));
     _putts(TEXT("*       Navicat Patcher by @DoubleLabyrinth       *"));
-    _putts(TEXT("*                  Version: 4.0                   *"));
+    _putts(TEXT("*                  Version: 4.1                   *"));
     _putts(TEXT("***************************************************"));
     _putts(TEXT(""));
     _putts(TEXT("Usage:"));
