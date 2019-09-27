@@ -55,8 +55,8 @@ namespace nkg {
     [[nodiscard]]
     bool PatchSolution1::FindPatchOffset() noexcept {
         try {
-            PIMAGE_SECTION_HEADER SectionHeader_text = _Image.ImageSectionHeader(".text");
-            PIMAGE_SECTION_HEADER SectionHeader_rdata = _Image.ImageSectionHeader(".rdata");
+            PIMAGE_SECTION_HEADER SectionHeader_text = _Image.ImageSectionHeaderByName(".text");
+            PIMAGE_SECTION_HEADER SectionHeader_rdata = _Image.ImageSectionHeaderByName(".rdata");
             const uint8_t* pbPatch[_countof(_PatchOffset)] = {};
 
             pbPatch[0] = _Image.SearchSection<const uint8_t*>(SectionHeader_rdata, [](const uint8_t* p) {

@@ -21,9 +21,9 @@ namespace nkg {
         PIMAGE_NT_HEADERS _NtHeaders;
         PIMAGE_SECTION_HEADER _SectionHeaderTable;
         std::map<uint64_t, size_t> _SectionNameTable;
-        std::map<uintptr_t, size_t> _SectionAddressTable;
-        std::map<uintptr_t, size_t> _SectionOffsetTable;
-        std::map<uintptr_t, size_t> _RelocationAddressTable;
+        std::map<uintptr_t, size_t> _SectionRvaTable;
+        std::map<uintptr_t, size_t> _SectionFileOffsetTable;
+        std::map<uintptr_t, size_t> _RelocationRvaTable;
         VS_FIXEDFILEINFO* _VsFixedFileInfo;
 
         ImageInterpreter();
@@ -57,33 +57,48 @@ namespace nkg {
         PIMAGE_SECTION_HEADER   ImageSectionTable() const noexcept;
 
         [[nodiscard]]
-        PIMAGE_SECTION_HEADER   ImageSectionHeader(PCSTR lpszSectionName) const;
+        PIMAGE_SECTION_HEADER   ImageSectionHeader(size_t Idx) const;
 
         [[nodiscard]]
-        PIMAGE_SECTION_HEADER   ImageSectionHeader(uintptr_t Rva) const;
+        PIMAGE_SECTION_HEADER   ImageSectionHeaderByName(PCSTR lpszSectionName) const;
+
+        [[nodiscard]]
+        PIMAGE_SECTION_HEADER   ImageSectionHeaderByRva(uintptr_t Rva) const;
+
+        [[nodiscard]]
+        PIMAGE_SECTION_HEADER   ImageSectionHeaderByVa(uintptr_t Va) const;
+
+        [[nodiscard]]
+        PIMAGE_SECTION_HEADER   ImageSectionHeaderByFileOffset(uintptr_t FileOffset) const;
 
         template<typename __PtrType = PVOID>
         [[nodiscard]]
-        __PtrType ImageSectionView(PCSTR lpszSectionName, size_t Offset = 0) const {
-            return ImageOffset<__PtrType>(ImageSectionHeader(lpszSectionName)->PointerToRawData + Offset);
-        }
-
-        template<typename __PtrType = PVOID>
-        [[nodiscard]]
-        __PtrType ImageSectionView(PIMAGE_SECTION_HEADER SectionHeader, size_t Offset = 0) const {
+        __PtrType ImageSectionView(PIMAGE_SECTION_HEADER SectionHeader, size_t Offset = 0) const noexcept {
             return ImageOffset<__PtrType>(SectionHeader->PointerToRawData + Offset);
         }
 
-        template<typename __ReturnType, typename __Hint>
+        template<typename __PtrType = PVOID>
         [[nodiscard]]
-        __ReturnType SearchSection(PCSTR lpszSectionName, __Hint&& Hint) const {
-            return SearchSection<__ReturnType>(ImageSectionHeader(lpszSectionName), std::forward<__Hint>(Hint));
+        __PtrType ImageSectionViewByName(PCSTR lpszSectionName, size_t Offset = 0) const {
+            return ImageOffset<__PtrType>(ImageSectionHeaderByName(lpszSectionName)->PointerToRawData + Offset);
         }
 
-        template<typename __ReturnType, typename __Hint>
+        template<typename __PtrType = PVOID>
         [[nodiscard]]
-        __ReturnType SearchSection(PCSTR lpszSectionName, size_t Offset, __Hint&& Hint) const {
-            return SearchSection<__ReturnType>(ImageSectionHeader(lpszSectionName), Offset, std::forward<__Hint>(Hint));
+        __PtrType ImageSectionViewByRva(uintptr_t Rva, size_t Offset = 0) const {
+            return ImageOffset<__PtrType>(ImageSectionHeaderByRva(Rva)->PointerToRawData + Offset);
+        }
+
+        template<typename __PtrType = PVOID>
+        [[nodiscard]]
+        __PtrType ImageSectionViewByVa(uintptr_t Va, size_t Offset = 0) const {
+            return ImageOffset<__PtrType>(ImageSectionHeaderByVa(Va)->PointerToRawData + Offset);
+        }
+
+        template<typename __PtrType = PVOID>
+        [[nodiscard]]
+        __PtrType ImageSectionViewByFileOffset(uintptr_t FileOffset, size_t Offset = 0) const {
+            return ImageOffset<__PtrType>(ImageSectionHeaderByFileOffset(FileOffset)->PointerToRawData + Offset);
         }
 
         template<typename __ReturnType, typename __Hint>
@@ -120,11 +135,23 @@ namespace nkg {
             throw Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("Data is not found."));
         }
 
+        template<typename __ReturnType, typename __Hint>
         [[nodiscard]]
-        uintptr_t RvaToFileOffset(uintptr_t Rva) const;
+        __ReturnType SearchSection(PCSTR lpszSectionName, __Hint&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSectionHeaderByName(lpszSectionName), std::forward<__Hint>(Hint));
+        }
+
+        template<typename __ReturnType, typename __Hint>
+        [[nodiscard]]
+        __ReturnType SearchSection(PCSTR lpszSectionName, size_t Offset, __Hint&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSectionHeaderByName(lpszSectionName), Offset, std::forward<__Hint>(Hint));
+        }
 
         [[nodiscard]]
-        uintptr_t FileOffsetToRva(uintptr_t FileOffset) const;
+        uintptr_t RvaToVa(uintptr_t Rva) const noexcept;
+
+        [[nodiscard]]
+        uintptr_t RvaToFileOffset(uintptr_t Rva) const;
 
         template<typename __PtrType = PVOID>
         [[nodiscard]]
@@ -133,17 +160,28 @@ namespace nkg {
             return ImageOffset<__PtrType>(RvaToFileOffset(Rva));
         }
 
-        template<typename __PtrType>
         [[nodiscard]]
-        uintptr_t PointerToRva(__PtrType Ptr) const {
-            static_assert(std::is_pointer_v<__PtrType>);
-            return FileOffsetToRva(reinterpret_cast<const volatile char*>(Ptr) - reinterpret_cast<const volatile char*>(_DosHeader));
-        }
+        uintptr_t FileOffsetToRva(uintptr_t FileOffset) const;
+
+        [[nodiscard]]
+        uintptr_t FileOffsetToVa(uintptr_t FileOffset) const;
 
         template<typename __PtrType>
         [[nodiscard]]
         __PtrType FileOffsetToPointer(uintptr_t FileOffset) const noexcept {
             return ImageOffset<__PtrType>(FileOffset);
+        }
+
+        [[nodiscard]]
+        uintptr_t VaToRva(uintptr_t Va) const noexcept;
+
+        [[nodiscard]]
+        uintptr_t VaToFileOffset(uintptr_t Va) const;
+
+        template<typename __PtrType>
+        [[nodiscard]]
+        __PtrType VaToPointer(uintptr_t Va) const noexcept {
+            return RvaToPointer<__PtrType>(VaToRva(Va));
         }
 
         template<typename __PtrType>
@@ -153,8 +191,32 @@ namespace nkg {
             return reinterpret_cast<const volatile char*>(Ptr) - reinterpret_cast<const volatile char*>(_DosHeader);
         }
 
+        template<typename __PtrType>
+        [[nodiscard]]
+        uintptr_t PointerToRva(__PtrType Ptr) const {
+            return FileOffsetToRva(PointerToFileOffset(Ptr));
+        }
+
+        template<typename __PtrType>
+        [[nodiscard]]
+        uintptr_t PointerToVa(__PtrType Ptr) const {
+            return FileOffsetToVa(PointerToFileOffset(Ptr));
+        }
+
         [[nodiscard]]
         bool IsRvaRangeInRelocTable(uintptr_t Rva, size_t Size) const;
+
+        [[nodiscard]]
+        bool IsVaRangeInRelocTable(uintptr_t Va, size_t Size) const;
+
+        [[nodiscard]]
+        bool IsFileOffsetRangeInRelocTable(uintptr_t FileOffset, size_t Size) const;
+
+        template<typename __PtrType>
+        [[nodiscard]]
+        bool IsFileOffsetRangeInRelocTable(__PtrType Ptr, size_t Size) const {
+            return IsRvaRangeInRelocTable(PointerToRva(Ptr), Size);
+        }
 
         [[nodiscard]]
         DWORD ImageFileMajorVersion() const;

@@ -437,7 +437,7 @@ print('};')
     bool PatchSolution2::FindPatchOffset() noexcept {
 
         try {
-            auto SectionHeader_text = _Image.ImageSectionHeader(".text");
+            auto SectionHeader_text = _Image.ImageSectionHeaderByName(".text");
             auto SectionView_text = _Image.ImageSectionView<const uint8_t*>(SectionHeader_text);
             const uint8_t* lpPatch[_countof(_PatchOffset)] = {};
 

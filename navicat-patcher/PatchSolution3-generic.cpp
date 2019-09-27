@@ -323,7 +323,7 @@ namespace nkg {
         }
 
         size_t PublicKeyReadCursor = 0;
-        auto SectionHeader_rdata = _Image.ImageSectionHeader(".rdata");
+        auto SectionHeader_rdata = _Image.ImageSectionHeaderByName(".rdata");
         auto SectionView_rdata = _Image.ImageSectionView(SectionHeader_rdata);
         
         for (size_t i = 0; i < _countof(_Patch); PublicKeyReadCursor += Keyword[i].Size, ++i) {

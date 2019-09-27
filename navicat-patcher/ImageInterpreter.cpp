@@ -64,8 +64,8 @@ namespace nkg {
                 NewImage._SectionNameTable[SectionName] = i;
             }
 
-            NewImage._SectionAddressTable[NewImage._SectionHeaderTable[i].VirtualAddress] = i;
-            NewImage._SectionOffsetTable[NewImage._SectionHeaderTable[i].PointerToRawData] = i;
+            NewImage._SectionRvaTable[NewImage._SectionHeaderTable[i].VirtualAddress] = i;
+            NewImage._SectionFileOffsetTable[NewImage._SectionHeaderTable[i].PointerToRawData] = i;
         }
 
         if (!DisableRelocationParsing && NewImage._NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress != 0) {
@@ -86,14 +86,14 @@ namespace nkg {
                         case IMAGE_REL_BASED_HIGH:
                         case IMAGE_REL_BASED_LOW:
                         case IMAGE_REL_BASED_HIGHADJ:
-                            NewImage._RelocationAddressTable[Rva + (RelocItems[i] & 0x0fff)] = 2;
+                            NewImage._RelocationRvaTable[Rva + (RelocItems[i] & 0x0fff)] = 2;
                             break;
                         case IMAGE_REL_BASED_HIGHLOW:
-                            NewImage._RelocationAddressTable[Rva + (RelocItems[i] & 0x0fff)] = 4;
+                            NewImage._RelocationRvaTable[Rva + (RelocItems[i] & 0x0fff)] = 4;
                             break;
 #if defined(IMAGE_REL_BASED_DIR64)
                         case IMAGE_REL_BASED_DIR64:
-                            NewImage._RelocationAddressTable[Rva + (RelocItems[i] & 0x0fff)] = 8;
+                            NewImage._RelocationRvaTable[Rva + (RelocItems[i] & 0x0fff)] = 8;
                             break;
 #endif
                         default:
@@ -179,7 +179,16 @@ namespace nkg {
     }
 
     [[nodiscard]]
-    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeader(PCSTR lpszSectionName) const {
+    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeader(size_t Idx) const {
+        if (Idx < _NtHeaders->FileHeader.NumberOfSections) {
+            return _SectionHeaderTable + Idx;
+        } else {
+            throw Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("Idx is out of range."));
+        }
+    }
+
+    [[nodiscard]]
+    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeaderByName(PCSTR lpszSectionName) const {
         uint64_t NameValue = 0;
 
         for (int i = 0; i < sizeof(NameValue) && lpszSectionName[i]; ++i)
@@ -196,9 +205,9 @@ namespace nkg {
     }
 
     [[nodiscard]]
-    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeader(uintptr_t Rva) const {
-        auto it = _SectionAddressTable.upper_bound(Rva);
-        if (it != _SectionAddressTable.begin()) {
+    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeaderByRva(uintptr_t Rva) const {
+        auto it = _SectionRvaTable.upper_bound(Rva);
+        if (it != _SectionRvaTable.begin()) {
             --it;
         }
 
@@ -215,15 +224,14 @@ namespace nkg {
     }
 
     [[nodiscard]]
-    uintptr_t ImageInterpreter::RvaToFileOffset(uintptr_t Rva) const {
-        auto SectionHeader = ImageSectionHeader(Rva);
-        return SectionHeader->PointerToRawData + (Rva - static_cast<uintptr_t>(SectionHeader->VirtualAddress));
+    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeaderByVa(uintptr_t Va) const {
+        return ImageSectionHeaderByRva(Va - _NtHeaders->OptionalHeader.ImageBase);
     }
 
     [[nodiscard]]
-    uintptr_t ImageInterpreter::FileOffsetToRva(uintptr_t FileOffset) const {
-        auto it = _SectionOffsetTable.upper_bound(FileOffset);
-        if (it != _SectionOffsetTable.begin()) {
+    PIMAGE_SECTION_HEADER ImageInterpreter::ImageSectionHeaderByFileOffset(uintptr_t FileOffset) const {
+        auto it = _SectionFileOffsetTable.upper_bound(FileOffset);
+        if (it != _SectionFileOffsetTable.begin()) {
             --it;
         }
 
@@ -232,7 +240,7 @@ namespace nkg {
         uintptr_t SectionFileOffsetEnd = SectionFileOffsetBegin + SectionHeader->SizeOfRawData;
 
         if (SectionFileOffsetBegin <= FileOffset && FileOffset < SectionFileOffsetEnd) {
-            return SectionHeader->VirtualAddress + (FileOffset - SectionHeader->PointerToRawData);
+            return SectionHeader;
         } else {
             throw Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("Target section header is not found."))
                 .AddHint(std::xstring::format(TEXT("FileOffset = 0x%zx"), FileOffset));
@@ -240,13 +248,54 @@ namespace nkg {
     }
 
     [[nodiscard]]
+    uintptr_t ImageInterpreter::RvaToVa(uintptr_t Rva) const noexcept {
+        return Rva + _NtHeaders->OptionalHeader.ImageBase;
+    }
+
+    [[nodiscard]]
+    uintptr_t ImageInterpreter::RvaToFileOffset(uintptr_t Rva) const {
+        auto SectionHeader = ImageSectionHeaderByRva(Rva);
+        return SectionHeader->PointerToRawData + (Rva - static_cast<uintptr_t>(SectionHeader->VirtualAddress));
+    }
+
+    [[nodiscard]]
+    uintptr_t ImageInterpreter::FileOffsetToRva(uintptr_t FileOffset) const {
+        auto SectionHeader = ImageSectionHeaderByFileOffset(FileOffset);
+        return SectionHeader->VirtualAddress + (FileOffset - SectionHeader->PointerToRawData);
+    }
+
+    [[nodiscard]]
+    uintptr_t ImageInterpreter::FileOffsetToVa(uintptr_t FileOffset) const {
+        return FileOffsetToRva(FileOffset) + _NtHeaders->OptionalHeader.ImageBase;
+    }
+
+    [[nodiscard]]
+    uintptr_t ImageInterpreter::VaToRva(uintptr_t Va) const noexcept {
+        return Va - _NtHeaders->OptionalHeader.ImageBase;
+    }
+    [[nodiscard]]
+    uintptr_t ImageInterpreter::VaToFileOffset(uintptr_t Va) const {
+        return ImageSectionHeaderByVa(Va)->PointerToRawData;
+    }
+
+    [[nodiscard]]
     bool ImageInterpreter::IsRvaRangeInRelocTable(uintptr_t Rva, size_t Size) const {
-        auto it = _RelocationAddressTable.upper_bound(Rva);
-        if (it != _RelocationAddressTable.begin()) {
+        auto it = _RelocationRvaTable.upper_bound(Rva);
+        if (it != _RelocationRvaTable.begin()) {
             --it;
         }
 
         return it->first <= Rva && Rva < it->first + it->second;
+    }
+
+    [[nodiscard]]
+    bool ImageInterpreter::IsVaRangeInRelocTable(uintptr_t Va, size_t Size) const {
+        return IsRvaRangeInRelocTable(VaToRva(Va), Size);
+    }
+
+    [[nodiscard]]
+    bool ImageInterpreter::IsFileOffsetRangeInRelocTable(uintptr_t FileOffset, size_t Size) const {
+        return IsRvaRangeInRelocTable(FileOffsetToRva(FileOffset), Size);
     }
 
     DWORD ImageInterpreter::ImageFileMajorVersion() const {
