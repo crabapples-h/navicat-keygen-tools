@@ -8,6 +8,8 @@
 
    * `capstone[x86]:x64-windows-static`
    * `capstone[x86]:x86-windows-static`
+   * `keystone:x64-windows-static`
+   * `keystone:x86-windows-static`
    * `openssl-windows:x64-windows-static`
    * `openssl-windows:x86-windows-static`
    * `rapidjson:x64-windows-static`
@@ -18,6 +20,8 @@
    ```console
    $ vcpkg install capstone[x86]:x64-windows-static
    $ vcpkg install capstone[x86]:x86-windows-static
+   $ vcpkg install keystone:x64-windows-static
+   $ vcpkg install keystone:x86-windows-static
    $ vcpkg install openssl-windows:x64-windows-static
    $ vcpkg install openssl-windows:x86-windows-static
    $ vcpkg install rapidjson:x64-windows-static
