@@ -102,7 +102,7 @@ namespace std {
 
         xstring(xstring_extension, const char* lpstr, DWORD CodePage = CP_ACP) {
             if (CodePage == CP_ACP || CodePage == GetACP()) {
-                assign(str);
+                assign(lpstr);
             } else {
                 std::wstring wstr;
 
