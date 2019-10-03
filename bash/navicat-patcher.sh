@@ -12,6 +12,7 @@ export WINEDLLPATH="$navicat_root/$WINEDIR/lib/wine"
 export WINELOADER="$navicat_root/$WINEDIR/bin/wine64"
 export WINESERVER="$navicat_root/$WINEDIR/bin/wineserver"
 export WINEPREFIX="$HOME/.navicat64"
+export WINEDEBUG=-all   # suppress all wine debug info
 
 # 将斜线替换为反斜线
 navicat_root_back_slash=${navicat_root//\//\\}

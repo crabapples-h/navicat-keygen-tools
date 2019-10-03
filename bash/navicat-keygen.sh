@@ -12,5 +12,6 @@ export WINEDLLPATH="$navicat_root/$WINEDIR/lib/wine"
 export WINELOADER="$navicat_root/$WINEDIR/bin/wine64"
 export WINESERVER="$navicat_root/$WINEDIR/bin/wineserver"
 export WINEPREFIX="$HOME/.navicat64"
+export WINEDEBUG=-all   # suppress all wine debug info
 
 exec "${WINELOADER:-wine}" "navicat-keygen.exe" "-text" "RegPrivateKey.pem"
