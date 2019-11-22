@@ -1,4 +1,5 @@
 #pragma once
+#include <openssl/opensslv.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/bio.h>
@@ -93,12 +94,18 @@ public:
 
     [[nodiscard]]
     size_t Bits() const {
+#if (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10000000     // openssl 1.0.x
         if (pvt_RsaObj->n == nullptr) {
             // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
             throw nkg::Exception(__FILE__, __LINE__, "RSA modulus has not been set.");
         } else {
             return BN_num_bits(pvt_RsaObj->n);
         }
+#elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10100000     // openssl 1.1.x
+        return RSA_bits(pvt_RsaObj);
+#else
+#error "Unexpected openssl version!"
+#endif
     }
 
     void GenerateKey(int bits, unsigned int e = RSA_F4) {
