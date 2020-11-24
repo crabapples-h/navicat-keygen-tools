@@ -6,8 +6,8 @@ CAPSTONE_LIB_PATH = #/usr/local/Cellar/capstone/4.0.1/lib
 KEYSTONE_INCLUDE_PATH = #/usr/local/Cellar/keystone/0.9.1/include
 KEYSTONE_LIB_PATH = #/usr/local/Cellar/keystone/0.9.1/lib
 RAPIDJSON_INCLUDE_PATH = #/usr/local/Cellar/rapidjson/1.1.0/include
-LIBPLIST_INCLUDE_PATH = #/usr/local/Cellar/libplist/2.0.0_1/include
-LIBPLIST_LIB_PATH = #/usr/local/Cellar/libplist/2.0.0_1/lib
+LIBPLIST_INCLUDE_PATH = #/usr/local/Cellar/libplist/2.2.0/include
+LIBPLIST_LIB_PATH = #/usr/local/Cellar/libplist/2.2.0/lib
 
 OUTPUT_DIR = ./bin/
 COMMON_DIR = ./common/
@@ -63,7 +63,7 @@ patcher: $(PATCHER_HEADER) $(PATCHER_SOURCE)
 $(if $(CAPSTONE_INCLUDE_PATH),-I$(CAPSTONE_INCLUDE_PATH),) $(if $(CAPSTONE_LIB_PATH),-L$(CAPSTONE_LIB_PATH),) \
 $(if $(KEYSTONE_INCLUDE_PATH),-I$(KEYSTONE_INCLUDE_PATH),) $(if $(KEYSTONE_LIB_PATH),-L$(KEYSTONE_LIB_PATH),) \
 $(if $(LIBPLIST_INCLUDE_PATH),-I$(LIBPLIST_INCLUDE_PATH),) $(if $(LIBPLIST_LIB_PATH),-L$(LIBPLIST_LIB_PATH),) \
--lcrypto -lcapstone -lkeystone -lplist++ $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
+-lcrypto -lcapstone -lkeystone -lplist++-2.0 $(PATCHER_SOURCE) -o $(PATCHER_BINARY)
 	@echo
 
 keygen: $(KEYGEM_HEADER) $(KEYGEN_SOURCE)
