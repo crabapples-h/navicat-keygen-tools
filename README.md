@@ -12,7 +12,7 @@ see [here](doc/how-to-build.md).
 
 ## 3. How to Use
 
-1. Download navicat from official website (Tested on Navicat Premium 15).
+1. Download navicat from official website.
 
    And you will get a AppImage file. For example, `navicat15-premium-en.AppImage`.
 
