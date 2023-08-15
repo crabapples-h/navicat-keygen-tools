@@ -108,8 +108,8 @@ namespace nkg {
             }
 #elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10100000     // openssl 1.1.x
             return RSA_bits(Get());
-#else
-#error "Unexpected openssl version!"
+#elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x30000000     // openssl 3.0.x
+            return RSA_bits(Get());
 #endif
         }
 
